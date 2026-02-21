@@ -1,9 +1,11 @@
 ---
-layout: single
+layout: post
 title: "From log.dll To A Decrypted Chrysalis Main Module"
 date: 2026-02-21 00:00:00 +0000
 permalink: /blog/chrysalis-offline-unpacking/
 toc: true
+categories: [malware-reversing, threat-intel]
+tags: [chrysalis, lotus-blossom, unpacking, emulation, malware-analysis]
 ---
 
 This write-up documents an end-to-end offline workflow for unpacking the Lotus Blossom “Chrysalis” chain described by Rapid7 (Feb 2026), without running the malware in a Windows debugger.

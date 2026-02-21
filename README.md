@@ -9,12 +9,13 @@ Public reverse engineering write-ups and notes.
 - Chrysalis post: `/blog/chrysalis-offline-unpacking/`
 
 Theme:
-- `minimal-mistakes` with `neon` skin (modern dark/hacker-styled)
+- `jekyll-theme-chirpy` (Cotes2020)
 
 ## Source Files
 
-- Post source: `blog/chrysalis-offline-unpacking.md`
-- Published post: `_posts/2026-02-21-chrysalis-offline-unpacking.md`
+- Home page entrypoint: `index.html`
+- Post source: `_posts/2026-02-21-chrysalis-offline-unpacking.md`
+- Chirpy tabs: `_tabs/`
 
 ## Downloadable Artifacts Referenced In The Post
 
