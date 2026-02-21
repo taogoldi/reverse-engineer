@@ -175,9 +175,7 @@ What we did instead:
 
 The key takeaway: we didn’t “beat” VEH by perfectly emulating it; we **sidestepped** it by extracting bytes at stable boundaries and applying the remaining transforms offline.
 
-![SEH prologue evidence at `0x48A890`]({{ '/assets/images/asm/asm_seh_48A890.png' | absolute_url }})
-
-SEH prologue evidence screenshot (`push 0FFFFFFFFh`, `push offset SEH_48A890`, `mov eax, fs:0`) from the patched main-module view.
+> Screenshot pending upload: SEH prologue evidence at `0x48A890` (`assets/images/asm/asm_seh_48A890.png`).
 
 ## Tooling Overview
 
@@ -504,9 +502,7 @@ Why this matters:
 - It ties the reversing claim directly to the implemented transform in `offline_extract_stage2.py`.
 - It explains why one correct pass over the 5 regions is sufficient in this sample workflow.
 
-![`mw_decrypt` key schedule and rolling mix]({{ '/assets/images/asm/asm_mw_decrypt_keyschedule.png' | absolute_url }})
-
-`mw_decrypt` pseudocode block showing `key[i] = seed_bytes[i % seed_len] ^ (0x55 * i)` and `key[i] = (key[i] + key[i-1]) ^ 0xAA`.
+> Screenshot pending upload: `mw_decrypt` key schedule and rolling mix (`assets/images/asm/asm_mw_decrypt_keyschedule.png`).
 
 <!-- IMAGE_REQUEST: side-by-side screenshot: IDA assembly of mw_decrypt loop + corresponding Python loop in scripts/offline_extract_stage2.py. -->
 
@@ -557,9 +553,7 @@ Why this matters:
 - It visually explains why the rainbow table and IDA enum/comment automation add immediate value.
 - It helps readers connect opaque constants to concrete API behavior.
 
-![`mw_apihashing` resolver pseudocode (context)]({{ '/assets/images/asm/asm_mw_apihashing_pseudocode.png' | absolute_url }})
-
-Resolver context screenshot for `mw_apihashing` (partial-evidence image; use with the upcoming hash-callsite capture for full proof).
+> Screenshot pending upload: `mw_apihashing` resolver context (`assets/images/asm/asm_mw_apihashing_pseudocode.png`).
 
 <!-- IMAGE_REQUEST: before/after screenshot from ida_chrysalis_api_hash_resolver.py showing raw hash constant vs resolved API annotation. -->
 
@@ -725,6 +719,8 @@ For most reverse engineering goals (IOCs, API usage, config extraction, control-
 
 This section summarizes patch “genetics”: which code regions changed, and how baseline instructions align against patched instructions in focused side-by-side slices. The goal is to provide visual evidence of transformation patterns without dumping full function listings inline.
 
+Function matching and SQLite diff alignment in this section were produced with [Diaphora](https://github.com/joxeankoret/diaphora). Credit to Joxean Koret and the Diaphora project for the diffing framework used in this workflow.
+
 ### Patch Range Genome Map
 
 The map below compresses all modified file-offset ranges from `patched_diff.json` into one timeline.
@@ -737,9 +733,7 @@ These are compact slices extracted from `asm_side_by_side_*.csv` outputs (genera
 
 <img src="{{ '/assets/images/patching/patch_snippet_0043CD83.svg' | absolute_url }}" alt="Side-by-side diff snippet 0x0043CD83" loading="lazy" style="max-width:100%;height:auto;" />
 
-![Patched disassembly view around `0x43CD83`]({{ '/assets/images/asm/asm_patch_43CD83_disasm.png' | absolute_url }})
-
-Direct disassembly screenshot of the patched `0x43CD83` region to complement the CSV/SVG side-by-side slice.
+> Screenshot pending upload: direct disassembly view around `0x43CD83` (`assets/images/asm/asm_patch_43CD83_disasm.png`).
 
 <img src="{{ '/assets/images/patching/patch_snippet_004863A0.svg' | absolute_url }}" alt="Side-by-side diff snippet 0x004863A0" loading="lazy" style="max-width:100%;height:auto;" />
 
