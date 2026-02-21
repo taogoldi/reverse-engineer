@@ -1,52 +1,97 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1200" preserveAspectRatio="xMidYMid slice">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1280" preserveAspectRatio="xMidYMid slice">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#020617"/>
-      <stop offset="45%" stop-color="#0b1f4d"/>
-      <stop offset="100%" stop-color="#0a1128"/>
+      <stop offset="0%" stop-color="#030817"/>
+      <stop offset="38%" stop-color="#071739"/>
+      <stop offset="72%" stop-color="#0b1f4f"/>
+      <stop offset="100%" stop-color="#0b1129"/>
     </linearGradient>
-    <radialGradient id="glowA" cx="22%" cy="28%" r="42%">
-      <stop offset="0%" stop-color="#3a6cff" stop-opacity="0.55"/>
-      <stop offset="100%" stop-color="#3a6cff" stop-opacity="0"/>
+    <radialGradient id="flareA" cx="28%" cy="26%" r="45%">
+      <stop offset="0%" stop-color="#4f7dff" stop-opacity="0.52"/>
+      <stop offset="100%" stop-color="#4f7dff" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="glowB" cx="78%" cy="72%" r="38%">
-      <stop offset="0%" stop-color="#73c3ff" stop-opacity="0.4"/>
-      <stop offset="100%" stop-color="#73c3ff" stop-opacity="0"/>
+    <radialGradient id="flareB" cx="74%" cy="70%" r="43%">
+      <stop offset="0%" stop-color="#4ad8ff" stop-opacity="0.38"/>
+      <stop offset="100%" stop-color="#4ad8ff" stop-opacity="0"/>
     </radialGradient>
-    <pattern id="grid" width="56" height="56" patternUnits="userSpaceOnUse">
-      <path d="M56 0H0V56" fill="none" stroke="#94a3b8" stroke-opacity="0.1" stroke-width="1"/>
+    <pattern id="grid" width="64" height="64" patternUnits="userSpaceOnUse">
+      <path d="M64 0H0V64" fill="none" stroke="#9bb2d5" stroke-opacity="0.12" stroke-width="1"/>
     </pattern>
+    <pattern id="hex" width="74" height="64" patternUnits="userSpaceOnUse">
+      <path d="M18 0L56 0L74 32L56 64L18 64L0 32Z" fill="none" stroke="#84a6ff" stroke-opacity="0.11" stroke-width="1"/>
+    </pattern>
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
 
-  <rect width="1800" height="1200" fill="url(#bg)"/>
-  <rect width="1800" height="1200" fill="url(#grid)"/>
-  <rect width="1800" height="1200" fill="url(#glowA)"/>
-  <rect width="1800" height="1200" fill="url(#glowB)"/>
+  <rect width="1920" height="1280" fill="url(#bg)"/>
+  <rect width="1920" height="1280" fill="url(#grid)"/>
+  <rect width="1920" height="1280" fill="url(#hex)"/>
+  <rect width="1920" height="1280" fill="url(#flareA)"/>
+  <rect width="1920" height="1280" fill="url(#flareB)"/>
 
-  <g stroke="#7aa2ff" stroke-opacity="0.42" stroke-width="2" fill="none">
-    <path d="M60 300H420L560 160H820L930 260H1280L1430 410H1730"/>
-    <path d="M40 760H290L430 620H710L870 780H1180L1310 910H1760"/>
-    <path d="M150 1050H560L740 900H1060L1200 1020H1620"/>
-    <path d="M210 120H430L520 240H790L980 80H1330L1490 220H1710"/>
+  <!-- Perspective guide lines -->
+  <g stroke="#76a8ff" stroke-opacity="0.12" stroke-width="1.2">
+    <path d="M120 1280L920 660"/>
+    <path d="M360 1280L980 660"/>
+    <path d="M620 1280L1040 660"/>
+    <path d="M1300 1280L1120 660"/>
+    <path d="M1560 1280L1180 660"/>
+    <path d="M1800 1280L1240 660"/>
   </g>
 
-  <g fill="#9dc0ff" fill-opacity="0.9">
-    <circle cx="420" cy="300" r="5"/>
-    <circle cx="820" cy="160" r="5"/>
-    <circle cx="1280" cy="260" r="5"/>
-    <circle cx="430" cy="620" r="5"/>
-    <circle cx="870" cy="780" r="5"/>
-    <circle cx="1310" cy="910" r="5"/>
-    <circle cx="740" cy="900" r="5"/>
-    <circle cx="1200" cy="1020" r="5"/>
-    <circle cx="520" cy="240" r="5"/>
-    <circle cx="980" cy="80" r="5"/>
-    <circle cx="1490" cy="220" r="5"/>
+  <!-- Core "AI reverse" chip -->
+  <g filter="url(#softGlow)">
+    <rect x="840" y="520" width="260" height="210" rx="16" fill="#0d1b45" fill-opacity="0.55" stroke="#86abff" stroke-opacity="0.75" stroke-width="2.2"/>
+    <rect x="875" y="555" width="190" height="140" rx="10" fill="#11285f" fill-opacity="0.7" stroke="#9ec1ff" stroke-opacity="0.8" stroke-width="1.5"/>
+    <circle cx="970" cy="625" r="34" fill="none" stroke="#8ec1ff" stroke-opacity="0.7" stroke-width="1.8"/>
+    <circle cx="970" cy="625" r="12" fill="#8ec1ff" fill-opacity="0.8"/>
   </g>
 
-  <g fill="#c0dcff" fill-opacity="0.22">
-    <circle cx="250" cy="170" r="160"/>
-    <circle cx="1340" cy="880" r="210"/>
-    <circle cx="980" cy="420" r="120"/>
+  <!-- Bus lines and nodes -->
+  <g stroke="#8fb5ff" stroke-opacity="0.55" stroke-width="2" fill="none">
+    <path d="M0 300H340L520 210H760L840 300"/>
+    <path d="M0 640H280L420 560H760L840 620"/>
+    <path d="M0 980H350L540 860H760L840 700"/>
+    <path d="M1920 250H1620L1450 370H1200L1100 540"/>
+    <path d="M1920 560H1650L1490 610H1200L1100 620"/>
+    <path d="M1920 910H1580L1410 850H1200L1100 700"/>
+    <path d="M970 520V390L1120 270H1370L1520 170H1920"/>
+    <path d="M970 730V840L1120 960H1390L1520 1080H1920"/>
+  </g>
+
+  <g fill="#c8ddff" fill-opacity="0.9">
+    <circle cx="340" cy="300" r="4.8"/>
+    <circle cx="520" cy="210" r="4.8"/>
+    <circle cx="760" cy="560" r="4.8"/>
+    <circle cx="540" cy="860" r="4.8"/>
+    <circle cx="1450" cy="370" r="4.8"/>
+    <circle cx="1490" cy="610" r="4.8"/>
+    <circle cx="1410" cy="850" r="4.8"/>
+    <circle cx="1120" cy="270" r="4.8"/>
+    <circle cx="1120" cy="960" r="4.8"/>
+  </g>
+
+  <!-- Reverse-engineering themed glyph layer -->
+  <g fill="#b9d2ff" fill-opacity="0.26" font-family="monospace" font-size="24">
+    <text x="120" y="170">0x401000</text>
+    <text x="260" y="820">cmp eax, [ebp+arg_4]</text>
+    <text x="1430" y="260">api_hash_resolver()</text>
+    <text x="1360" y="730">VirtualProtect(....)</text>
+    <text x="210" y="1110">rc4_ksa_prga</text>
+    <text x="1370" y="1110">diff_patched_pe --json</text>
+    <text x="840" y="1040">reverse + ai + telemetry</text>
+  </g>
+
+  <!-- Brighter highlights -->
+  <g fill="#dff2ff" fill-opacity="0.22">
+    <circle cx="260" cy="220" r="190"/>
+    <circle cx="1540" cy="980" r="240"/>
+    <circle cx="1000" cy="460" r="140"/>
   </g>
 </svg>
