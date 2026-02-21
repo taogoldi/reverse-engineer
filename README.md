@@ -5,7 +5,6 @@ Public reverse engineering write-ups and notes.
 ## Public Site
 
 - Home: `/`
-- Blog index: `/blog/`
 - Chrysalis post: `/blog/chrysalis-offline-unpacking/`
 
 Theme:
