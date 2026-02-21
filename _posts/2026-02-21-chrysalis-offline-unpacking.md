@@ -627,56 +627,6 @@ Why this matters:
 
 <!-- IMAGE_REQUEST: screenshot of one dispatcher function with at least 3 tag compares and branch targets visible. -->
 
-## Screenshots To Capture (For A Technical Report Or Blog)
-
-Good screenshots should prove claims, not decorate the page. The list below is ordered to mirror the analyst journey from sample verification to loader boundary to decrypted outputs and then into IDA triage.
-
-> **Plain-English:** A good screenshot answers a question ("how do we know this is true?"). If an image does not prove a claim, skip it.
-
-If you want a “Rapid7-like” write-up with visuals, these are the screenshots that add real value:
-
-1. `input/` file listing and SHA-256 hashes matching Rapid7 (terminal).
-2. `log.dll` exports showing `LogInit` and `LogWrite` (PE viewer / Ghidra/IDA).
-3. Emulator run hitting the breakpoint at `0x10001C11` and printing `EAX=...` plus dumped file hashes (terminal).
-4. Hex view of `shellcode.bin` at its dumped base (show it’s raw, non-PE).
-5. Offline decrypt step printing region RVAs/sizes and output `main_module_patched.exe` SHA-256 (terminal).
-6. A PE header view of `main_module_patched.exe` showing:
-   - ImageBase `0x400000`
-   - EntryPoint RVA `0x471B0`
-   - Import directory present
-7. Imports view listing the DLLs Rapid7 mentions (kernel32/user32/advapi32/shlwapi/wininet/etc).
-8. Config decrypt output showing the C2 URL and UA string (either strings view or a small hexdump + decoded text).
-9. `pe_find.py` output locating the `0x980` constant and mapping to VA (terminal), then a screenshot of that VA in the disassembler to show where you started tracing the config path.
-10. `ida_chrysalis_api_hash_resolver.py` output panel showing canary + resolved annotations.
-11. `ida_c2_dispatch_lifter.py` output panel showing ranked dispatcher candidates.
-12. One patched-range highlighted view from `ida_main_module_triage.py` and one hash-annotation example from `ida_hash_table_apply.py`.
-13. VirtualProtect handoff call with argument values visible (`0x40`, `0x200000`, decrypted buffer pointer).
-14. RC4 loop screenshot showing 256-byte state initialization and at least one swap operation.
-15. Command-tag dispatcher screenshot with multiple `cmp`/branch pairs in one view.
-
-### How To Capture And Send Screenshots For Fast Integration
-
-If you send screenshots, I can wire them into the post quickly if they follow this format:
-
-1. Include file name + function name + address in each screenshot title bar or note.
-2. Keep one screenshot per claim (avoid collages unless it is explicitly side-by-side evidence).
-3. Use consistent zoom so opcodes and comments are readable (roughly 12-14 pt monospace equivalent).
-4. Show addresses column, instruction bytes/opcodes, and comments/xrefs pane when relevant.
-5. For terminal screenshots, include the full command line and first lines of output including hashes.
-6. Add a red box or underline only on the key value (`0x10001C11`, `0x980`, `0x30808`, etc.) to reduce clutter.
-7. Export as PNG (not JPEG) to keep text crisp.
-8. Use this naming pattern so mapping is automatic:
-   - `asm_A_logwrite_handoff.png`
-   - `asm_B_mw_decrypt_loop.png`
-   - `asm_C_arg_struct_regions.png`
-   - `asm_D_rc4_constants.png`
-   - `asm_E_api_hash_before_after.png`
-   - `asm_F_virtualprotect_args.png`
-   - `asm_G_rc4_ksa_prga_loop.png`
-   - `asm_H_dispatch_tags.png`
-
-After you share the images, I can insert them directly under each matching section and add concise captions.
-
 ## Flowchart (Pipeline Overview)
 
 The flowchart is useful for onboarding: it gives a one-screen model of where emulation stops, where offline transforms begin, and where reporting artifacts are generated. This is especially helpful when handing work to teammates who only need one stage.
