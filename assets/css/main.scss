@@ -135,6 +135,44 @@ body.layout--home {
   padding: 0.9rem 1rem;
 }
 
+/* Blog post pages */
+body.layout--single {
+  background-color: #020816;
+  background-image:
+    repeating-linear-gradient(
+      180deg,
+      rgba(158, 191, 255, 0.02) 0px,
+      rgba(158, 191, 255, 0.02) 1px,
+      transparent 1px,
+      transparent 5px
+    ),
+    radial-gradient(circle at 15% 16%, rgba(65, 105, 225, 0.17), transparent 46%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.4), rgba(2, 6, 23, 0.78)),
+    url("../images/ai-circuit-bg.svg");
+  background-size: auto, 140% 140%, 100% 100%, cover;
+  background-position: 0 0, 18% 18%, center, center;
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat;
+  background-attachment: fixed, fixed, fixed, fixed;
+}
+
+.layout--single .initial-content {
+  background: transparent;
+}
+
+.layout--single .page {
+  background: rgba(6, 12, 30, 0.72);
+  border: 1px solid rgba(122, 162, 255, 0.22);
+  border-radius: 12px;
+  box-shadow: 0 20px 42px rgba(3, 7, 18, 0.45);
+  padding: 1rem 1.05rem;
+}
+
+@media (max-width: 900px) {
+  .layout--single .page {
+    padding: 0.7rem 0.65rem;
+  }
+}
+
 @keyframes home-bg-pan {
   0% {
     background-position: 0 0, 0% 0%, center, center;
