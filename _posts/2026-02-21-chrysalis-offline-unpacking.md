@@ -27,6 +27,19 @@ The constraints are practical:
 - The analysis environment is an ARM Mac.
 - We still want deterministic outputs we can reverse in Ghidra/IDA and share as hashes/artifacts.
 
+## Quick Primer (For Less Technical Readers)
+
+If you are newer to malware analysis, these terms help decode the rest of this article:
+- **DLL sideloading**: A trusted application loads a malicious DLL from the same folder, so bad code runs under a normal-looking process.
+- **Stage / payload**: Malware often arrives in layers. One layer decrypts and launches the next.
+- **Emulation**: Running code in a simulated CPU/memory environment instead of executing it directly on your operating system.
+- **PE file**: The standard Windows executable format (`.exe`, `.dll`).
+- **Hash (SHA-256)**: A content fingerprint used to verify files are exactly the same.
+- **RVA/VA**: Addressing terms used in reversing. RVA is an offset inside a module; VA is the absolute runtime address.
+- **Diff report**: A comparison of “before vs after” bytes/code, used to prove exactly what changed.
+
+If you only want the high-level story, read: `Execution Chain` -> `Why Emulation` -> `Step 1/2/3` -> `Closing Notes`. The deeper IDA/assembly sections are there for specialist validation.
+
 ## Downloads
 
 Everything referenced in this article is grouped so readers can either consume the write-up quickly or pull the exact scripts and reports needed to reproduce one section at a time. The intent is to make this usable as both a narrative report and a working analysis kit.
@@ -116,6 +129,8 @@ This is the short operational story behind the unpacking work: sideloaded loader
 
 The key design choice was to emulate only the part that gives high signal with low instability. Trying to fully emulate hostile stage1 code on a constrained analysis host burns time quickly and produces brittle results, while extracting clean bytes at the handoff boundary gives deterministic progress.
 
+In plain terms: we used emulation as a controlled extraction tool, not as a perfect "run the malware end-to-end" substitute. That decision kept the workflow stable and reproducible for people who are not building a full Windows runtime from scratch.
+
 The first stage (`log.dll`) is a good fit for emulation:
 - It is normal PE code.
 - It calls a predictable set of WinAPI functions (heap + virtual memory).
@@ -132,6 +147,18 @@ Instead of forcing stage1 to “run” perfectly, we use emulation only to **ext
 Early attempts that treated exceptions as regular crashes produced misleading dead ends. Reframing those faults as intentional control-flow mechanics changed the strategy from "make everything execute" to "capture stable state at the right boundary and continue offline."
 
 Stage1’s behavior is consistent with SEH/VEH-driven loaders: code that intentionally faults and expects an exception handler to redirect execution. In a normal Windows debug session, those exceptions become “control flow”. In a basic emulator, they become crashes or infinite loops.
+
+What these terms mean:
+- **SEH (Structured Exception Handling)**: Windows' built-in, stack-based exception system. When code hits an error (for example invalid memory access), execution can be redirected to a registered handler instead of just terminating.
+- **VEH (Vectored Exception Handling)**: A process-wide callback chain for exceptions that can run before regular SEH handlers. Malware often uses VEH because it gives centralized control over fault behavior.
+
+Why this causes issues in analysis tools:
+- Malware can **intentionally trigger faults** (bad reads, invalid instructions, divide-by-zero) as part of normal logic.
+- A debugger or emulator may treat those as "something broke" and pause/abort, while malware expects the handler to catch them and continue.
+- If your environment does not reproduce Windows exception ordering (first-chance vs second-chance, VEH before/after SEH, handler return semantics), control flow diverges quickly.
+- The result is common: loops, fake dead ends, wrong branch paths, or crashes that are not real crashes in the malware's intended runtime.
+
+Non-technical analogy: SEH/VEH are like emergency detour routes in a city. The malware sometimes drives into a "closed road" on purpose because it expects the detour signs to route it to the next checkpoint. If your map app does not understand those detours, it reports a dead end even though a valid route exists.
 
 We did **not** implement a full Windows SEH/VEH dispatcher in Unicorn.
 
