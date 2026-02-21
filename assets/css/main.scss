@@ -4,25 +4,66 @@
 @import "minimal-mistakes/skins/neon";
 @import "minimal-mistakes";
 
-/* Modern, high-contrast tweaks on top of the neon skin */
-.page__hero,
-.masthead,
-.greedy-nav,
-.archive__subtitle {
-  border-bottom: 1px solid rgba(90, 255, 160, 0.28);
+/* Requested tweaks:
+   1) smaller font
+   2) wider/full-screen content usage
+   3) replace red accents with navy/royal blue */
+html {
+  font-size: 14px;
+}
+
+.masthead__inner-wrap,
+.page,
+.archive,
+.initial-content,
+#main {
+  max-width: 100%;
+}
+
+.page__inner-wrap {
+  width: min(98vw, 2200px);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.initial-content {
+  min-height: 100vh;
+}
+
+a {
+  color: #4169e1;
+}
+
+a:hover,
+a:focus {
+  color: #1e3a8a;
+}
+
+.greedy-nav a:hover,
+.greedy-nav a:focus {
+  color: #4169e1;
+}
+
+.btn,
+.btn--primary {
+  background-color: #1e3a8a;
+  color: #eaf0ff;
+}
+
+.btn:hover,
+.btn:focus,
+.btn--primary:hover,
+.btn--primary:focus {
+  background-color: #112a6b;
 }
 
 .page__content a,
 .archive__item-title a {
-  text-decoration-thickness: 2px;
-  text-underline-offset: 0.15em;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.12em;
 }
 
 code,
 pre {
-  border-radius: 8px;
-}
-
-.notice--info {
-  border-left: 4px solid #5aff9f;
+  border-radius: 6px;
 }

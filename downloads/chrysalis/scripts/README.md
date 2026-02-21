@@ -1,6 +1,6 @@
 # Scripts Reference
 
-Run commands from repo root: `/Users/yakovgoldberg/Downloads/Chrysalis`.
+Run commands from your local project root.
 
 ## Setup
 

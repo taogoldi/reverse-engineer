@@ -20,24 +20,24 @@ The constraints are practical:
 
 ### Source and tooling bundles
 
-- Full repository zip: [Download](https://github.com/taogoldi/reverse-engineer/archive/refs/heads/main.zip)
-- Scripts/emulators bundle: [Folder](https://github.com/taogoldi/reverse-engineer/tree/main/downloads/chrysalis/scripts)
-- IDA automation scripts: [Folder](https://github.com/taogoldi/reverse-engineer/tree/main/downloads/chrysalis/ida)
-- Notebooks bundle: [Folder](https://github.com/taogoldi/reverse-engineer/tree/main/downloads/chrysalis/notebooks)
-- DB diff CSV reports: [Folder](https://github.com/taogoldi/reverse-engineer/tree/main/downloads/chrysalis/reports/db_diff_reports)
-- Binary diff results: [Folder](https://github.com/taogoldi/reverse-engineer/tree/main/downloads/chrysalis/reports/binary_diff)
-- Pipeline flowchart assets: [Folder](https://github.com/taogoldi/reverse-engineer/tree/main/downloads/chrysalis/docs)
+- Bundle index: [Open]({{ "/downloads/chrysalis/" | relative_url }})
+- Scripts/emulators bundle: [Folder]({{ "/downloads/chrysalis/scripts/" | relative_url }})
+- IDA automation scripts: [Folder]({{ "/downloads/chrysalis/ida/" | relative_url }})
+- Notebooks bundle: [Folder]({{ "/downloads/chrysalis/notebooks/" | relative_url }})
+- DB diff CSV reports: [Folder]({{ "/downloads/chrysalis/reports/db_diff_reports/" | relative_url }})
+- Binary diff results: [Folder]({{ "/downloads/chrysalis/reports/binary_diff/" | relative_url }})
+- Pipeline flowchart assets: [Folder]({{ "/downloads/chrysalis/docs/" | relative_url }})
 
 ### Direct files often requested
 
-- `run_chrysalis_pipeline.py`: [raw](https://raw.githubusercontent.com/taogoldi/reverse-engineer/main/downloads/chrysalis/scripts/run_chrysalis_pipeline.py)
-- `emulate_logwrite_dump_shellcode.py`: [raw](https://raw.githubusercontent.com/taogoldi/reverse-engineer/main/downloads/chrysalis/scripts/emulate_logwrite_dump_shellcode.py)
-- `offline_extract_stage2.py`: [raw](https://raw.githubusercontent.com/taogoldi/reverse-engineer/main/downloads/chrysalis/scripts/offline_extract_stage2.py)
-- `render_cfg_diff_html.py`: [raw](https://raw.githubusercontent.com/taogoldi/reverse-engineer/main/downloads/chrysalis/scripts/render_cfg_diff_html.py)
-- `sqlite_diff_report.py`: [raw](https://raw.githubusercontent.com/taogoldi/reverse-engineer/main/downloads/chrysalis/scripts/sqlite_diff_report.py)
-- `patched_diff.txt`: [raw](https://raw.githubusercontent.com/taogoldi/reverse-engineer/main/downloads/chrysalis/reports/binary_diff/patched_diff.txt)
-- `patched_diff.json`: [raw](https://raw.githubusercontent.com/taogoldi/reverse-engineer/main/downloads/chrysalis/reports/binary_diff/patched_diff.json)
-- `chrysalis_unpacking_walkthrough.ipynb`: [raw](https://raw.githubusercontent.com/taogoldi/reverse-engineer/main/downloads/chrysalis/notebooks/chrysalis_unpacking_walkthrough.ipynb)
+- `run_chrysalis_pipeline.py`: [download]({{ "/downloads/chrysalis/scripts/run_chrysalis_pipeline.py" | relative_url }})
+- `emulate_logwrite_dump_shellcode.py`: [download]({{ "/downloads/chrysalis/scripts/emulate_logwrite_dump_shellcode.py" | relative_url }})
+- `offline_extract_stage2.py`: [download]({{ "/downloads/chrysalis/scripts/offline_extract_stage2.py" | relative_url }})
+- `render_cfg_diff_html.py`: [download]({{ "/downloads/chrysalis/scripts/render_cfg_diff_html.py" | relative_url }})
+- `sqlite_diff_report.py`: [download]({{ "/downloads/chrysalis/scripts/sqlite_diff_report.py" | relative_url }})
+- `patched_diff.txt`: [download]({{ "/downloads/chrysalis/reports/binary_diff/patched_diff.txt" | relative_url }})
+- `patched_diff.json`: [download]({{ "/downloads/chrysalis/reports/binary_diff/patched_diff.json" | relative_url }})
+- `chrysalis_unpacking_walkthrough.ipynb`: [download]({{ "/downloads/chrysalis/notebooks/chrysalis_unpacking_walkthrough.ipynb" | relative_url }})
 
 ## File Hashes (Inputs and Produced Artifacts)
 
@@ -53,8 +53,8 @@ All hashes below are SHA-256 values from the workflow run referenced in this rep
 | `output/main_module_patched.exe` | Produced (patched module) | `bd0fb50084a21876fdbcf33fc7cf1949b78020f9e169086b2dd0b6aae28ad359` | Not redistributed (malware-derived) |
 | `output/main_module_mem.bin` | Produced (memory image) | `129a91eaa5e03b112ecfccd858b8c7fc4f482158a53d8300f2505d7c120f87d3` | Not redistributed (malware-derived) |
 | `output/config_decrypted.bin` | Produced (decrypted config blob) | `aad018195c5ee6c2e3c00bc3c95313cb4301218534765472124ebc7b5fb7bcb1` | Not redistributed |
-| `output/patched_diff.json` | Produced report | `a5fdfdebfd367cabae0c41fa91846a6f54d585fa0090f86d8db0d4cd84facf4f` | [raw](https://raw.githubusercontent.com/taogoldi/reverse-engineer/main/downloads/chrysalis/reports/binary_diff/patched_diff.json) |
-| `output/patched_diff.txt` | Produced report | `b462aa52be01625c72965b3b99c2ef37ccc64e834e4fd9cba624a0e6a6c1f5f7` | [raw](https://raw.githubusercontent.com/taogoldi/reverse-engineer/main/downloads/chrysalis/reports/binary_diff/patched_diff.txt) |
+| `output/patched_diff.json` | Produced report | `a5fdfdebfd367cabae0c41fa91846a6f54d585fa0090f86d8db0d4cd84facf4f` | [download]({{ "/downloads/chrysalis/reports/binary_diff/patched_diff.json" | relative_url }}) |
+| `output/patched_diff.txt` | Produced report | `b462aa52be01625c72965b3b99c2ef37ccc64e834e4fd9cba624a0e6a6c1f5f7` | [download]({{ "/downloads/chrysalis/reports/binary_diff/patched_diff.txt" | relative_url }}) |
 
 ## What You Get At The End
 
