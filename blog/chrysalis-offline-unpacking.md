@@ -526,12 +526,18 @@ If you want a “Rapid7-like” write-up with visuals, these are the screenshots
 
 The flowchart is useful for onboarding: it gives a one-screen model of where emulation stops, where offline transforms begin, and where reporting artifacts are generated. This is especially helpful when handing work to teammates who only need one stage.
 
-The pipeline diagram is captured in `pipeline_flowchart.dot` and can be rendered to:
-- `output/pipeline_flowchart.png`
+The diagram below reflects the current pipeline order in `run_chrysalis_pipeline.py`, including the SQLite diff reports and static-SVG CFG HTML generation stages.
+
+![Chrysalis Offline Unpacking Pipeline]({{ "/downloads/chrysalis/docs/pipeline_flowchart.png" | relative_url }})
+
+Source DOT file (versioned in repo):
+- `downloads/chrysalis/docs/pipeline_flowchart.dot`
 
 Render command (requires Graphviz `dot`):
 ```bash
-python3 scripts/render_flowchart.py --out output/pipeline_flowchart.png
+python3 downloads/chrysalis/scripts/render_flowchart.py \
+  --dot downloads/chrysalis/docs/pipeline_flowchart.dot \
+  --out downloads/chrysalis/docs/pipeline_flowchart.png
 ```
 
 If `dot` is not installed on macOS, install Graphviz (e.g. via Homebrew) and re-run the command.
