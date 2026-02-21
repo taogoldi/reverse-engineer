@@ -175,7 +175,7 @@ What we did instead:
 
 The key takeaway: we didn’t “beat” VEH by perfectly emulating it; we **sidestepped** it by extracting bytes at stable boundaries and applying the remaining transforms offline.
 
-![SEH prologue at 0x48A890 showing exception registration setup]({{ "/assets/images/asm/asm_F_seh_48A890.png" | relative_url }})
+<img src="{{ '/assets/images/asm/asm_F_seh_48A890.png' | absolute_url }}" alt="SEH prologue at 0x48A890 showing exception registration setup" loading="lazy" style="max-width:100%;height:auto;" />
 *SEH prologue evidence at `0x48A890` showing handler registration (`fs:[0]`) and guard-frame setup before protected logic.*
 
 ## Tooling Overview
@@ -481,7 +481,7 @@ Why this matters:
 - This is the exact boundary where stage0 is still tractable and stage1 begins.
 - It justifies extracting bytes at the breakpoint instead of emulating full stage1 behavior.
 
-![log.dll LogWrite handoff boundary with decrypt, VirtualProtect, and stage1 arg-struct setup]({{ "/assets/images/asm/asm_A_logwrite_handoff.png" | relative_url }})
+<img src="{{ '/assets/images/asm/asm_A_logwrite_handoff.png' | absolute_url }}" alt="log.dll LogWrite handoff boundary with decrypt, VirtualProtect, and stage1 arg-struct setup" loading="lazy" style="max-width:100%;height:auto;" />
 *`log.dll!LogWrite` handoff boundary: decryption call, RWX transition, and stage1 argument-structure initialization before control transfer.*
 
 ### B) `mw_decrypt` Byte-Transform Core
@@ -504,7 +504,7 @@ Why this matters:
 - It ties the reversing claim directly to the implemented transform in `offline_extract_stage2.py`.
 - It explains why one correct pass over the 5 regions is sufficient in this sample workflow.
 
-![mw_decrypt core key schedule and rolling byte transform pseudocode]({{ "/assets/images/asm/asm_C_mw_decrypt_core.png" | relative_url }})
+<img src="{{ '/assets/images/asm/asm_C_mw_decrypt_core.png' | absolute_url }}" alt="mw_decrypt core key schedule and rolling byte transform pseudocode" loading="lazy" style="max-width:100%;height:auto;" />
 *`mw_decrypt` core transform and key schedule logic used by the offline extractor implementation.*
 
 <!-- IMAGE_REQUEST: side-by-side screenshot: IDA assembly of mw_decrypt loop + corresponding Python loop in scripts/offline_extract_stage2.py. -->
@@ -556,7 +556,7 @@ Why this matters:
 - It visually explains why the rainbow table and IDA enum/comment automation add immediate value.
 - It helps readers connect opaque constants to concrete API behavior.
 
-![mw_apihashing resolver pseudocode from log.dll]({{ "/assets/images/asm/asm_B_api_hash_resolver.png" | relative_url }})
+<img src="{{ '/assets/images/asm/asm_B_api_hash_resolver.png' | absolute_url }}" alt="mw_apihashing resolver pseudocode from log.dll" loading="lazy" style="max-width:100%;height:auto;" />
 *`mw_apihashing` resolver internals used to map 32-bit API hash constants to exported function names.*
 
 <!-- IMAGE_REQUEST: before/after screenshot from ida_chrysalis_api_hash_resolver.py showing raw hash constant vs resolved API annotation. -->
@@ -579,7 +579,7 @@ Why this matters:
 - It shows the exact point where decrypted bytes become executable.
 - It is one of the clearest "stage boundary" markers in this chain.
 
-![VirtualProtect transition and stage1 argument-block construction in LogWrite]({{ "/assets/images/asm/asm_E_hash_callsite_logwrite.png" | relative_url }})
+<img src="{{ '/assets/images/asm/asm_E_hash_callsite_logwrite.png' | absolute_url }}" alt="VirtualProtect transition and stage1 argument-block construction in LogWrite" loading="lazy" style="max-width:100%;height:auto;" />
 *Callsite view showing `APIHASH_47C204CA` resolution, `VirtualProtect(..., 0x200000, 0x40, ...)`, and immediate writes into the stage1 argument block.*
 
 ### G) RC4 Routine Shape (KSA/PRGA Fingerprint)
@@ -732,7 +732,7 @@ The map below compresses all modified file-offset ranges from `patched_diff.json
 
 <img src="{{ '/assets/images/patching/patch_range_map.svg' | absolute_url }}" alt="Patch range map from patched_diff.json" loading="lazy" style="max-width:100%;height:auto;" />
 
-![Patched-range disassembly anchor around loc_401000]({{ "/assets/images/asm/asm_H_patch_range_401000.png" | relative_url }})
+<img src="{{ '/assets/images/asm/asm_H_patch_range_401000.png' | absolute_url }}" alt="Patched-range disassembly anchor around loc_401000" loading="lazy" style="max-width:100%;height:auto;" />
 *Disassembly anchor near `loc_401000`, included as a concrete low-level view complementary to the aggregate patch-range map.*
 
 ### Side-By-Side Diff Slices (Focused)
@@ -741,7 +741,7 @@ These are compact slices extracted from `asm_side_by_side_*.csv` outputs (genera
 
 <img src="{{ '/assets/images/patching/patch_snippet_0043CD83.svg' | absolute_url }}" alt="Side-by-side diff snippet 0x0043CD83" loading="lazy" style="max-width:100%;height:auto;" />
 
-![Direct disassembly view around 0x43CD83]({{ "/assets/images/asm/asm_G_patch_43CD83.png" | relative_url }})
+<img src="{{ '/assets/images/asm/asm_G_patch_43CD83.png' | absolute_url }}" alt="Direct disassembly view around 0x43CD83" loading="lazy" style="max-width:100%;height:auto;" />
 *Direct IDA disassembly around `0x43CD83`, aligned with the focused side-by-side genetics slice above.*
 
 <img src="{{ '/assets/images/patching/patch_snippet_004863A0.svg' | absolute_url }}" alt="Side-by-side diff snippet 0x004863A0" loading="lazy" style="max-width:100%;height:auto;" />
