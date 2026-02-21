@@ -1,0 +1,7 @@
+title: Reverse Engineer
+description: Public reverse engineering write-ups and notes
+theme: jekyll-theme-hacker
+url: "https://taogoldi.github.io"
+baseurl: "/reverse-engineer"
+markdown: kramdown
+permalink: /blog/:title/
