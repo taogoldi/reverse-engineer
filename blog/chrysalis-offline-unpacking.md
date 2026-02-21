@@ -539,6 +539,71 @@ Why this matters:
 
 <!-- IMAGE_REQUEST: before/after screenshot from ida_chrysalis_api_hash_resolver.py showing raw hash constant vs resolved API annotation. -->
 
+### F) Memory-Protection Transition Before Stage Handoff
+
+Representative pattern to capture at the end of loader preparation:
+
+```asm
+push    offset old_protect
+push    40h              ; PAGE_EXECUTE_READWRITE
+push    200000h          ; 2MB region
+push    eax              ; decrypted stage1 base
+call    ds:VirtualProtect
+test    eax, eax
+jz      short fail_path
+```
+
+Why this matters:
+- It shows the exact point where decrypted bytes become executable.
+- It is one of the clearest "stage boundary" markers in this chain.
+
+<!-- IMAGE_REQUEST: screenshot with stack/arguments view visible for VirtualProtect call showing 0x40 and 0x200000. -->
+
+### G) RC4 Routine Shape (KSA/PRGA Fingerprint)
+
+Representative RC4-like pattern to look for in config-decrypt logic (exact registers may vary):
+
+```asm
+xor     ecx, ecx               ; i = 0
+loc_init:
+mov     [state+ecx], cl        ; state[i] = i
+inc     ecx
+cmp     ecx, 100h
+jb      short loc_init
+...
+; key scheduling / swaps
+movzx   eax, byte ptr [state+ecx]
+add     edx, eax
+movzx   eax, byte ptr [key+...]
+add     edx, eax
+xchg    byte ptr [state+ecx], byte ptr [state+edx]
+```
+
+Why this matters:
+- It demonstrates that config decryption is algorithmic and reproducible, not a guessed string extraction.
+- It gives readers a visual anchor for validating RC4 path discovery in IDA.
+
+<!-- IMAGE_REQUEST: screenshot of RC4 state-init/key-scheduling loop with 0x100 (256-byte) loop boundary visible. -->
+
+### H) Command Tag Dispatch Pattern In Main Module
+
+Representative dispatcher shape for command tags (`4T..4d` family):
+
+```asm
+cmp     eax, TAG_4T           ; example symbolic tag
+jz      loc_handle_4T
+cmp     eax, TAG_4U           ; example symbolic tag
+jz      loc_handle_4U
+...
+jmp     loc_default
+```
+
+Why this matters:
+- It ties command-tag tables to concrete handler branches.
+- It helps less technical readers understand "this tag selects this behavior" at a glance.
+
+<!-- IMAGE_REQUEST: screenshot of one dispatcher function with at least 3 tag compares and branch targets visible. -->
+
 ## Screenshots To Capture (For A Technical Report Or Blog)
 
 Good screenshots should prove claims, not decorate the page. The list below is ordered to mirror the analyst journey from sample verification to loader boundary to decrypted outputs and then into IDA triage.
@@ -562,6 +627,32 @@ If you want a “Rapid7-like” write-up with visuals, these are the screenshots
 10. `ida_chrysalis_api_hash_resolver.py` output panel showing canary + resolved annotations.
 11. `ida_c2_dispatch_lifter.py` output panel showing ranked dispatcher candidates.
 12. One patched-range highlighted view from `ida_main_module_triage.py` and one hash-annotation example from `ida_hash_table_apply.py`.
+13. VirtualProtect handoff call with argument values visible (`0x40`, `0x200000`, decrypted buffer pointer).
+14. RC4 loop screenshot showing 256-byte state initialization and at least one swap operation.
+15. Command-tag dispatcher screenshot with multiple `cmp`/branch pairs in one view.
+
+### How To Capture And Send Screenshots For Fast Integration
+
+If you send screenshots, I can wire them into the post quickly if they follow this format:
+
+1. Include file name + function name + address in each screenshot title bar or note.
+2. Keep one screenshot per claim (avoid collages unless it is explicitly side-by-side evidence).
+3. Use consistent zoom so opcodes and comments are readable (roughly 12-14 pt monospace equivalent).
+4. Show addresses column, instruction bytes/opcodes, and comments/xrefs pane when relevant.
+5. For terminal screenshots, include the full command line and first lines of output including hashes.
+6. Add a red box or underline only on the key value (`0x10001C11`, `0x980`, `0x30808`, etc.) to reduce clutter.
+7. Export as PNG (not JPEG) to keep text crisp.
+8. Use this naming pattern so mapping is automatic:
+   - `asm_A_logwrite_handoff.png`
+   - `asm_B_mw_decrypt_loop.png`
+   - `asm_C_arg_struct_regions.png`
+   - `asm_D_rc4_constants.png`
+   - `asm_E_api_hash_before_after.png`
+   - `asm_F_virtualprotect_args.png`
+   - `asm_G_rc4_ksa_prga_loop.png`
+   - `asm_H_dispatch_tags.png`
+
+After you share the images, I can insert them directly under each matching section and add concise captions.
 
 ## Flowchart (Pipeline Overview)
 
