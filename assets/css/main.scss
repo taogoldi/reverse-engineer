@@ -194,6 +194,47 @@ body.layout--single {
   z-index: 1;
 }
 
+.layout--single .sidebar__right .toc {
+  background:
+    linear-gradient(165deg, rgba(12, 31, 78, 0.74), rgba(7, 18, 48, 0.76)),
+    url("../images/ai-circuit-bg.svg") center / cover no-repeat;
+  border: 1px solid rgba(128, 170, 255, 0.35);
+  border-radius: 10px;
+  box-shadow:
+    0 10px 24px rgba(2, 8, 24, 0.45),
+    inset 0 0 0 1px rgba(188, 214, 255, 0.12);
+  padding: 0.7rem 0.75rem 0.6rem;
+}
+
+.layout--single .sidebar__right .toc .nav__title {
+  margin-bottom: 0.45rem;
+}
+
+@media (min-width: 64em) {
+  .layout--single .page__content {
+    position: relative;
+  }
+
+  .layout--single .sidebar__right,
+  .layout--single .sidebar__right.sticky {
+    position: sticky;
+    top: 1rem;
+    right: auto;
+    float: right;
+    width: min(23vw, 300px);
+    margin: 0 0 1rem 1rem;
+    margin-right: 0;
+    padding-left: 0;
+    z-index: 3;
+  }
+
+  .layout--single .sidebar__right .toc .toc__menu {
+    max-height: calc(100vh - 8rem);
+    overflow-y: auto;
+    padding-right: 0.2rem;
+  }
+}
+
 .hash-table-lg table {
   font-size: 0.88rem;
   line-height: 1.32;
