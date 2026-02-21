@@ -175,6 +175,8 @@ The key takeaway: we didn’t “beat” VEH by perfectly emulating it; we **sid
 
 The toolkit is intentionally split into narrow scripts rather than one opaque monolith. That keeps each stage testable, makes failure modes easier to isolate, and lets analysts replace only the piece they need for a variant sample.
 
+> **Plain-English:** Think of this toolkit like a recipe where each script does one kitchen task: one script extracts data, one script decrypts data, one script compares changes, and one script renders reports. Small tools are easier to trust than one giant script that does everything at once.
+
 We built a small toolkit:
 - `emulate_logwrite_dump_shellcode.py`:
   - Unicorn x86 emulation for the `log.dll!LogWrite` path.
@@ -239,6 +241,8 @@ If these do not hold, stop and fix stage0 first (bad input file, wrong image bas
 
 Step 2 converts a dynamic reversing problem into a deterministic byte transform problem. Once we have stable stage1 outputs and argument metadata, we can reconstruct the next stage without depending on fragile runtime control flow.
 
+> **Plain-English:** Instead of trying to "run" difficult malware code, we apply the same math to the bytes ourselves. That is safer, easier to repeat, and much less likely to fail because of debugger quirks.
+
 Rapid7 provides the bytewise transform:
 
 ```c
@@ -256,6 +260,8 @@ Two key observations that make offline work reliable:
 1. The 25-dword argument structure passed to stage1 includes the region RVAs and sizes.
 2. The transform is an involution (apply it twice and you get the original byte back), which means:
    - applying it 5 times is equivalent to applying it once.
+
+In simple terms, this transform behaves like a reversible scramble. If the malware scrambles and unscrambles in a predictable way, we can reproduce that behavior offline and validate it with byte-level diffs.
 
 In our sample the region list is:
 - RVAs: `0x1000, 0x24000, 0x2D000, 0x30000, 0x31000`
@@ -310,6 +316,8 @@ This is consistent with Rapid7’s statement that the module “executes the MSV
 
 Hash-resolved imports are one of the biggest readability blockers in loader analysis. This section explains why we modeled the loader hash path directly: replacing opaque immediates with likely API names accelerates every downstream review step.
 
+> **Plain-English:** The malware hides API names by storing short numeric codes (hashes) instead of readable names like `VirtualProtect`. A rainbow table is just a lookup sheet that turns those numbers back into likely names.
+
 Rapid7 describes `log.dll` as resolving APIs via a hashing subroutine instead of importing everything by name. At a high level, the loader:
 1. Enumerates exports of a target DLL (or a module it has already loaded).
 2. Hashes each export name with:
@@ -334,6 +342,8 @@ Main-module hashing is different:
 ## IDA Automation That Removed Manual Busywork
 
 Manual annotation works for one function, but it does not scale when the same patterns appear across hundreds of callsites. The IDA scripts were written to remove repetitive analyst effort and preserve consistent naming/comments across re-analysis sessions.
+
+> **Plain-English:** Without automation, analysts manually rename and comment the same patterns again and again. These scripts are "auto-labelers" that save time and make sure two analysts see the same names, not two different interpretations.
 
 Two practical IDA workflows were automated:
 
@@ -442,6 +452,8 @@ This section is intended for the final published write-up where readers want to 
 
 The assembly snippets below are chosen as proof points: each one links a reversing claim to a concrete instruction pattern and a corresponding script action. If a reader can verify these anchors, they can trust the surrounding automation.
 
+> **Plain-English:** Assembly is the CPU's native instruction language. You do not need to read every line to follow the story here; focus on the highlighted boundaries (decrypt, memory-protect, jump) and how they connect to the scripts.
+
 ### A) `log.dll!LogWrite` Handoff Boundary
 
 Representative pattern around the stage1 boundary:
@@ -539,6 +551,8 @@ Why this matters:
 
 Good screenshots should prove claims, not decorate the page. The list below is ordered to mirror the analyst journey from sample verification to loader boundary to decrypted outputs and then into IDA triage.
 
+> **Plain-English:** A good screenshot answers a question ("how do we know this is true?"). If an image does not prove a claim, skip it.
+
 If you want a “Rapid7-like” write-up with visuals, these are the screenshots that add real value:
 
 1. `input/` file listing and SHA-256 hashes matching Rapid7 (terminal).
@@ -560,6 +574,8 @@ If you want a “Rapid7-like” write-up with visuals, these are the screenshots
 ## Flowchart (Pipeline Overview)
 
 The flowchart is useful for onboarding: it gives a one-screen model of where emulation stops, where offline transforms begin, and where reporting artifacts are generated. This is especially helpful when handing work to teammates who only need one stage.
+
+> **Plain-English:** This diagram is the "movie trailer" for the whole process. It shows inputs, major steps, and outputs so readers can understand the sequence before diving into technical details.
 
 The diagram below reflects the current pipeline order in `run_chrysalis_pipeline.py`, including the SQLite diff reports and static-SVG CFG HTML generation stages.
 
