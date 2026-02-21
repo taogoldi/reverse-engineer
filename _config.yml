@@ -1,4 +1,4 @@
-remote_theme: cotes2020/jekyll-theme-chirpy
+theme: jekyll-theme-chirpy
 
 lang: en
 timezone: America/New_York
@@ -54,14 +54,6 @@ kramdown:
     block:
       line_numbers: true
       start_line: 1
-
-plugins:
-  - jekyll-remote-theme
-  - jekyll-paginate
-  - jekyll-feed
-  - jekyll-sitemap
-  - jekyll-seo-tag
-  - jekyll-include-cache
 
 sass:
   style: compressed
