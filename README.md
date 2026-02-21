@@ -4,9 +4,9 @@ Public reverse engineering write-ups and notes.
 
 ## Public Site
 
-- Home: [https://taogoldi.github.io/reverse-engineer/](https://taogoldi.github.io/reverse-engineer/)
-- Blog index: [https://taogoldi.github.io/reverse-engineer/blog/](https://taogoldi.github.io/reverse-engineer/blog/)
-- Chrysalis post: [https://taogoldi.github.io/reverse-engineer/blog/chrysalis-offline-unpacking/](https://taogoldi.github.io/reverse-engineer/blog/chrysalis-offline-unpacking/)
+- Home: `/`
+- Blog index: `/blog/`
+- Chrysalis post: `/blog/chrysalis-offline-unpacking/`
 
 Theme:
 - `minimal-mistakes` with `neon` skin (modern dark/hacker-styled)
