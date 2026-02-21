@@ -165,6 +165,10 @@ What we did instead:
 
 The key takeaway: we didn’t “beat” VEH by perfectly emulating it; we **sidestepped** it by extracting bytes at stable boundaries and applying the remaining transforms offline.
 
+![SEH prologue evidence at `0x48A890`]({{ '/assets/images/asm/asm_seh_48A890.png' | absolute_url }})
+
+SEH prologue evidence screenshot (`push 0FFFFFFFFh`, `push offset SEH_48A890`, `mov eax, fs:0`) from the patched main-module view.
+
 ## Tooling Overview
 
 The toolkit is intentionally split into narrow scripts rather than one opaque monolith. That keeps each stage testable, makes failure modes easier to isolate, and lets analysts replace only the piece they need for a variant sample.
@@ -490,6 +494,10 @@ Why this matters:
 - It ties the reversing claim directly to the implemented transform in `offline_extract_stage2.py`.
 - It explains why one correct pass over the 5 regions is sufficient in this sample workflow.
 
+![`mw_decrypt` key schedule and rolling mix]({{ '/assets/images/asm/asm_mw_decrypt_keyschedule.png' | absolute_url }})
+
+`mw_decrypt` pseudocode block showing `key[i] = seed_bytes[i % seed_len] ^ (0x55 * i)` and `key[i] = (key[i] + key[i-1]) ^ 0xAA`.
+
 <!-- IMAGE_REQUEST: side-by-side screenshot: IDA assembly of mw_decrypt loop + corresponding Python loop in scripts/offline_extract_stage2.py. -->
 
 ### C) Stage1 Arg-Struct Region Mapping
@@ -538,6 +546,10 @@ mov     [ebp+virtualprotect_ptr], eax
 Why this matters:
 - It visually explains why the rainbow table and IDA enum/comment automation add immediate value.
 - It helps readers connect opaque constants to concrete API behavior.
+
+![`mw_apihashing` resolver pseudocode (context)]({{ '/assets/images/asm/asm_mw_apihashing_pseudocode.png' | absolute_url }})
+
+Resolver context screenshot for `mw_apihashing` (partial-evidence image; use with the upcoming hash-callsite capture for full proof).
 
 <!-- IMAGE_REQUEST: before/after screenshot from ida_chrysalis_api_hash_resolver.py showing raw hash constant vs resolved API annotation. -->
 
@@ -714,6 +726,10 @@ The map below compresses all modified file-offset ranges from `patched_diff.json
 These are compact slices extracted from `asm_side_by_side_*.csv` outputs (generated from the DB diff workflow). They are intentionally trimmed to representative instruction windows so readers can quickly compare baseline vs patched behavior.
 
 <img src="{{ '/assets/images/patching/patch_snippet_0043CD83.svg' | absolute_url }}" alt="Side-by-side diff snippet 0x0043CD83" loading="lazy" style="max-width:100%;height:auto;" />
+
+![Patched disassembly view around `0x43CD83`]({{ '/assets/images/asm/asm_patch_43CD83_disasm.png' | absolute_url }})
+
+Direct disassembly screenshot of the patched `0x43CD83` region to complement the CSV/SVG side-by-side slice.
 
 <img src="{{ '/assets/images/patching/patch_snippet_004863A0.svg' | absolute_url }}" alt="Side-by-side diff snippet 0x004863A0" loading="lazy" style="max-width:100%;height:auto;" />
 
