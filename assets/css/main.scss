@@ -69,39 +69,29 @@ pre {
 }
 
 /* Homepage polish */
-.layout--home .initial-content {
-  position: relative;
-  isolation: isolate;
-}
-
-.layout--home .initial-content::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  background: url("../images/ai-circuit-bg.svg") center / cover no-repeat;
-  transform: scale(1.03);
-  transform-origin: center;
-  animation: home-bg-drift 24s ease-in-out infinite alternate;
-}
-
-.layout--home .initial-content::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background:
+body.layout--home {
+  background-color: #020817;
+  background-image:
     repeating-linear-gradient(
       180deg,
-      rgba(158, 191, 255, 0.03) 0px,
-      rgba(158, 191, 255, 0.03) 1px,
+      rgba(158, 191, 255, 0.035) 0px,
+      rgba(158, 191, 255, 0.035) 1px,
       transparent 1px,
       transparent 4px
     ),
-    radial-gradient(circle at 20% 20%, rgba(65, 105, 225, 0.14), transparent 42%),
-    linear-gradient(180deg, rgba(2, 6, 23, 0.08), rgba(2, 6, 23, 0.64));
-  animation: home-overlay-pulse 11s ease-in-out infinite;
-  pointer-events: none;
+    radial-gradient(circle at 20% 20%, rgba(65, 105, 225, 0.24), transparent 44%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.2), rgba(2, 6, 23, 0.72)),
+    url("../images/ai-circuit-bg.svg");
+  background-size: auto, 145% 145%, 100% 100%, cover;
+  background-position: 0 0, 0% 0%, center, center;
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat;
+  background-attachment: fixed, fixed, fixed, fixed;
+  animation: home-bg-pan 24s ease-in-out infinite alternate;
+}
+
+.layout--home .initial-content {
+  position: relative;
+  background: transparent;
 }
 
 .layout--home .archive {
@@ -145,25 +135,17 @@ pre {
   padding: 0.9rem 1rem;
 }
 
-@keyframes home-bg-drift {
+@keyframes home-bg-pan {
   0% {
-    transform: scale(1.03) translate3d(0, 0, 0);
-    filter: saturate(1) brightness(1);
+    background-position: 0 0, 0% 0%, center, center;
   }
   100% {
-    transform: scale(1.07) translate3d(-1.1%, -0.7%, 0);
-    filter: saturate(1.08) brightness(1.04);
+    background-position: 0 0, 100% 100%, center, center;
   }
 }
 
-@keyframes home-overlay-pulse {
-  0% {
-    opacity: 0.78;
-  }
-  50% {
-    opacity: 0.92;
-  }
-  100% {
-    opacity: 0.8;
+@media (prefers-reduced-motion: reduce) {
+  body.layout--home {
+    animation: none;
   }
 }
