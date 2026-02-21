@@ -1,0 +1,468 @@
+# From `log.dll` To A Decrypted Chrysalis Main Module (Offline On macOS)
+
+This write-up documents an end-to-end offline workflow for unpacking the Lotus Blossom “Chrysalis” chain described by Rapid7 (Feb 2026), without running the malware in a Windows debugger.
+
+The constraints are practical:
+- The loader and payload are x86 Windows artifacts.
+- The analysis environment is an ARM Mac.
+- We still want deterministic outputs we can reverse in Ghidra/IDA and share as hashes/artifacts.
+
+## What You Get At The End
+
+By the end of this workflow you will have:
+- A dumped stage1 buffer (`shellcode.bin`) and the full stage1 executable region (`shellcode_full.bin`).
+- A decrypted “main module”:
+  - as a patched container on disk (`main_module_patched.exe`)
+  - and optionally as a clean in-memory image (`main_module_mem.bin`)
+- A decrypted configuration blob (`config_decrypted.bin`) with the C2 and other fields Rapid7 described.
+
+And importantly:
+- A repeatable pipeline that does not rely on “it ran in my debugger”.
+
+## Artifacts
+
+The Rapid7 `update.exe` bundle we worked from contains:
+- `log.dll` (malicious sideloaded DLL)
+- `BluetoothService.exe` (renamed Bitdefender Submission Wizard used as the sideload container)
+- `BluetoothService` (encrypted blob; we store as `encrypted_shellcode.bin`)
+
+Rapid7 hashes (and what we observed locally):
+- `log.dll` sha256 `3bdc4c0637591533f1d4198a72a33426c01f69bd2e15ceee547866f65e26b7ad`
+- `BluetoothService.exe` sha256 `2da00de67720f5f13b17e9d985fe70f10f153da60c9ab1086fe58f069a156924`
+- `BluetoothService` / `encrypted_shellcode.bin` sha256 `77bfea78def679aa1117f569a35e8fd1542df21f7e00e27f192c907e61d63a2e`
+
+## Execution Chain (Condensed)
+
+1. `BluetoothService.exe` loads `log.dll` via DLL sideloading and calls two exports:
+   - `LogInit`: loads the encrypted blob into memory.
+   - `LogWrite`: resolves APIs via hashing, decrypts the blob, marks it executable, and jumps to it with a 25-dword argument structure.
+2. The decrypted blob (stage1) is not a PE. It is a loader-like shellcode that:
+   - Decrypts the next module layer using a simple byte transform with key `"gQ2JR&9;"` over 5 regions.
+   - Resolves APIs again and transfers execution to the “main module”.
+3. The main module behaves like a reflective PE-like implant (“Chrysalis”), performs CRT init, then executes its main logic.
+4. The implant decrypts configuration data stored in the `BluetoothService` blob using RC4.
+
+## Why Emulation (And What Not To Emulate)
+
+The first stage (`log.dll`) is a good fit for emulation:
+- It is normal PE code.
+- It calls a predictable set of WinAPI functions (heap + virtual memory).
+- We can stub the APIs well enough to reach the “decrypted buffer is ready” breakpoint.
+
+Stage1 execution is much less friendly:
+- It uses exception-driven control flow and odd instructions (port I/O, segment ops, `retf`, etc.).
+- A naïve emulator tends to crash or spin in anti-emulation loops.
+
+Instead of forcing stage1 to “run” perfectly, we use emulation only to **extract the decrypted bytes** and then apply the remaining transforms offline.
+
+## SEH/VEH And “Debugger Problems” (How We Handled Them)
+
+Stage1’s behavior is consistent with SEH/VEH-driven loaders: code that intentionally faults and expects an exception handler to redirect execution. In a normal Windows debug session, those exceptions become “control flow”. In a basic emulator, they become crashes or infinite loops.
+
+We did **not** implement a full Windows SEH/VEH dispatcher in Unicorn.
+
+What we did instead:
+- **Avoided** needing stage1 to execute correctly by dumping its decrypted bytes at the `log.dll` breakpoint and continuing offline.
+- Added a few **surgical mitigations** to keep emulation from failing too early during `log.dll`/handoff work:
+  - map the NULL page and plant a minimal `MZ`/`PE\\0\\0` structure (prevents common “base==0” PE-header reads from faulting),
+  - Capstone-assisted decoding for diagnostics and targeted register fixups in specific patterns,
+  - optional “skip lists” for a small set of stage1 junk instructions when experimenting (port I/O, segment ops, etc.).
+
+The key takeaway: we didn’t “beat” VEH by perfectly emulating it; we **sidestepped** it by extracting bytes at stable boundaries and applying the remaining transforms offline.
+
+## Tooling Overview
+
+We built a small toolkit:
+- `emulate_logwrite_dump_shellcode.py`:
+  - Unicorn x86 emulation for the `log.dll!LogWrite` path.
+  - Minimal API stubs (`HeapAlloc/Free/ReAlloc/Size`, `VirtualAlloc/Protect`, etc.).
+  - Dumps stage1 bytes at the decryption breakpoint.
+- `offline_extract_stage2.py`:
+  - Applies Rapid7’s `"gQ2JR&9;"` per-byte transform over the 5 regions described by the stage1 argument struct.
+  - Can output a patched PE on disk or a reconstructed memory image.
+- `decrypt_btservice_config.py`:
+  - RC4-decrypts the config at offset `0x30808` size `0x980` with key `qwhvb^435h&*7`.
+- `api_hash_rainbow.py` (Windows):
+  - Builds a rainbow table for the **loader/log.dll API hashing** described by Rapid7.
+  - This is useful when reversing `log.dll` (and similar loader components) because it maps a 32-bit “API hash” back to a likely `(dll, export)` pair.
+  - Note: Rapid7 also describes a separate, more complex API hashing routine in the decrypted main module; that would be a different tool/implementation.
+- `ida_chrysalis_api_hash_resolver.py`:
+  - Standalone IDAPython automation for `log.dll`.
+  - Builds a local rainbow from Windows DLL exports, resolves resolver constants, and applies enum symbols/comments so disassembly and decompiler show API names instead of raw hex.
+- `ida_main_module_triage.py`:
+  - Standalone IDAPython automation for `main_module_patched.exe` / `main_module_mem.bin`.
+  - Applies command-tag enum labels (`4T..4d`) and can mark patched ranges from JSON output so analysis focuses on malicious regions first.
+- `ida_config_path_mapper.py`:
+  - Standalone IDAPython config-path triage for patched/memory module views.
+  - Scores likely config-decryption functions using immediate/string markers and can export a CSV report.
+- `ida_c2_dispatch_lifter.py`:
+  - Standalone IDAPython dispatch extractor for command tags (`4T..4d`).
+  - Ranks likely dispatcher functions and exports a handler-reference table (CSV).
+- `ida_hash_table_apply.py`:
+  - Standalone IDAPython hash annotator that ingests nested rainbow JSON and replaces matching immediate constants with enum/comments at scale.
+
+## Step 1: Unicorn Emulation Of `log.dll!LogWrite`
+
+We map `log.dll` at its expected image base (`0x10000000`) and set a breakpoint at:
+- `RVA 0x1C11` (VA `0x10001C11`)
+
+At the breakpoint, `EAX` points to the decrypted stage1 buffer. We dump:
+- The “reported” stage1 length (201,096 bytes / `0x31188` in this sample)
+- The full 2MB region (`0x200000`) that the malware marks executable via `VirtualProtect`
+
+Outputs:
+- `shellcode.bin` (stage1)
+- `shellcode_full.bin` (stage1 full region)
+
+Why the full 2MB dump matters:
+- The stage1 code references data past the initial “payload length”.
+- Later offline extraction becomes easier when we keep the whole protected region.
+
+### What We Validate Here
+
+At this point we want the following to be true:
+- Our `input/` hashes match Rapid7 (so we know we are working on the same sample family).
+- The emulator hits the breakpoint (`0x10001C11`) and prints `EAX=...` pointing into a mapped buffer.
+- `shellcode.bin` length is `0x31188` for the Rapid7 sample.
+- `shellcode_full.bin` length is `0x200000`.
+
+If these do not hold, stop and fix stage0 first (bad input file, wrong image base, missing stub, etc.).
+
+## Step 2: Offline Main-Module Decryption (“gQ2JR&9;”)
+
+Rapid7 provides the bytewise transform:
+
+```c
+BYTE k = XORKey[counter & 7];
+BYTE x = encrypted[pos];
+x = x + k;
+x = x ^ k;
+x = x - k;
+decrypted[pos] = x;
+```
+
+They also note the transform is applied 5 times, suggesting 5 PE-like regions.
+
+Two key observations that make offline work reliable:
+1. The 25-dword argument structure passed to stage1 includes the region RVAs and sizes.
+2. The transform is an involution (apply it twice and you get the original byte back), which means:
+   - applying it 5 times is equivalent to applying it once.
+
+In our sample the region list is:
+- RVAs: `0x1000, 0x24000, 0x2D000, 0x30000, 0x31000`
+- Sizes: `0x23000, 0x8E00, 0xC00, 0x200, 0x1C00`
+- Total modified bytes: `0x2E800`
+
+We implement an offline decryptor that can:
+- Patch a PE on disk (`BluetoothService.exe`) in-place to produce a “decrypted” container (`main_module_patched.exe`)
+- Build a decrypted in-memory image (`main_module_mem.bin`)
+
+Important note about signatures:
+- VirusTotal will report the patched PE as “signed” + “invalid signature”.
+- That’s expected: the container was signed, and we modified it.
+
+### Why A “Patched PE” Is Still Useful
+
+Even though `main_module_patched.exe` remains the Bitdefender container, it is a practical bridge artifact:
+- You can point standard PE tooling at it (imports, entrypoint, sections).
+- You can confirm the decrypted regions line up with a PE-like layout.
+- You can diff it against the original and confirm that exactly `0x2E800` bytes changed.
+
+For deeper reversing, the cleaner artifact is the reconstructed memory image (`main_module_mem.bin`), because it avoids file-offset vs RVA confusion when the malware expects an in-memory view.
+
+## Step 3: RC4 Config Decryption (Exact Match To Rapid7)
+
+Rapid7 describes the config location:
+- Stored in `BluetoothService` blob
+- Offset `0x30808`, size `0x980`
+- RC4 key `qwhvb^435h&*7`
+
+We decrypt it offline and confirm plaintext fields match:
+- `https://api.skycloudcenter.com/a/chat/s/{GUID}`
+- module name `BluetoothService`
+- Chrome user-agent string
+
+## Validating The “Main Module” Looks Real
+
+Once the decrypted bytes are in place, the PE behaves like a normal x86 user-mode program:
+- PE header is intact
+- Import directory is populated (kernel32/user32/advapi32/ole32/wininet/etc)
+- The entrypoint resembles MSVC CRT scaffolding
+
+This is consistent with Rapid7’s statement that the module “executes the MSVC CRT initialization sequence” before transferring control to main.
+
+## Loader API Hashing (What `api_hash_rainbow.py` Models)
+
+Rapid7 describes `log.dll` as resolving APIs via a hashing subroutine instead of importing everything by name. At a high level, the loader:
+1. Enumerates exports of a target DLL (or a module it has already loaded).
+2. Hashes each export name with:
+   - **FNV-1a** (seed `0x811C9DC5`, prime `0x01000193`)
+   - followed by a **MurmurHash-style avalanche finalizer**
+3. Applies a **salted comparison** against a hardcoded target hash.
+
+Why a “rainbow table” helps:
+- Once you know a target 32-bit hash value, you can brute-force which common WinAPI export name likely produced it (across `C:\\Windows\\System32\\*.dll`).
+- This converts “opaque numbers in disassembly” back into recognizable APIs like `VirtualProtect`, `GetProcAddress`, etc.
+
+Practical caveats:
+- The exact salting and name normalization (e.g., case folding) can vary by sample. That’s why `api_hash_rainbow.py` exposes knobs:
+  - export-name case (`asis/lower/upper`)
+  - salt operation (`xor/add/sub`) and whether it’s applied pre/post finalizer
+  - whether the avalanche finalizer is enabled
+
+Main-module hashing is different:
+- Rapid7 also describes a second hashing routine used in the decrypted main module that walks the PEB and mixes API names in 4-byte blocks with additional rotations/multiplications.
+- That is *not* the same as the loader hash above, and would need a separate implementation to generate an accurate rainbow table for main-module-only hashes.
+
+## IDA Automation That Removed Manual Busywork
+
+Two practical IDA workflows were automated:
+
+1. Loader hash resolution in `log.dll` (`ida_chrysalis_api_hash_resolver.py`)
+- Input:
+  - `log.dll` opened in IDA
+  - Windows export directories (`C:\\Windows\\SysWOW64;C:\\Windows\\System32`)
+  - resolver EA (`0x100014E0` in this sample)
+  - seed (`0x114DDB33` in this sample)
+- Output:
+  - Enum-applied immediate operands at resolver callsites
+  - Comments such as:
+    - `APIHASH 0x47C204CA -> KERNEL32.dll!VirtualProtect`
+- Result:
+  - constants in disassembly/decompiler become readable API symbols, which is faster than one-off manual comments.
+
+2. Main-module triage in patched/memory artifacts (`ida_main_module_triage.py`)
+- Input:
+  - `main_module_patched.exe` or `main_module_mem.bin` opened in IDA
+  - optional patched-range JSON from `diff_patched_pe.py`
+- Output:
+  - command-tag enum labels for the C2 dispatch values (`4T..4d`)
+  - optional colored/annotated patched ranges to prioritize likely malicious logic
+- Result:
+  - faster navigation in large mixed binaries (legit container code + injected/decrypted regions).
+
+3. Config-path mapper (`ida_config_path_mapper.py`)
+- Input:
+  - patched or memory module in IDA
+- Output:
+  - comments/highlights for constants and strings tied to config path (`0x980`, `0x30808`, and related xrefs)
+  - import-xref hits for config-path APIs (`CreateFileW`, `ReadFile`, `SetFilePointerEx`, etc.)
+  - ranked candidate functions and optional CSV export
+- Notes:
+  - if the first pass returns zero hits (common when IDA marks all segments executable), the script retries on all segments automatically
+  - you can provide extra marker DWORDs on prompt (for this family, `0x2C5D0` and `0x116A7` are practical anchors)
+- Result:
+  - faster handoff from broad triage to concrete RC4/config parsing functions.
+
+4. C2 dispatch lifter (`ida_c2_dispatch_lifter.py`)
+- Input:
+  - patched or memory module in IDA
+- Output:
+  - enum/comment applied tag references for `4T..4d`
+  - dispatcher candidate ranking by unique tag coverage
+  - optional CSV for writeups
+- Result:
+  - deterministic command-handler mapping instead of manual grep through decompiler output.
+
+5. Bulk hash annotation from JSON (`ida_hash_table_apply.py`)
+- Input:
+  - nested hash JSON (`DLL -> hash -> export`)
+  - IDA database with immediate hash constants
+- Output:
+  - hash constants converted to readable comments/enums at matched sites
+- Result:
+  - quick cleanup of “opaque constant” surfaces in both disassembly and pseudocode.
+
+6. LogWrite/decrypt decompiler reconstruction (`ida_rebuild_logwrite.py`)
+- Input:
+  - `log.dll` in IDA
+  - function anchors around `LogWrite` (`0x10001B20`) and `mw_decrypt` (`0x10001640`)
+- Output:
+  - typed/renamed `LogWrite` pseudocode (`VirtualProtect` pointer + stage1 arg struct)
+  - explicit no-arg `mw_decrypt` prototype at callsite
+  - helper-function naming + key-block comments inside `mw_decrypt` (seed expansion, 0x20-byte schedule, transform, copy-back)
+- Result:
+  - decompiler output becomes stable enough to map directly to assembly and to the offline Python implementation.
+
+Decompiler pitfall worth calling out:
+- `mw_decrypt` uses a nonstandard prologue/SEH setup and reads caller context from stack internals.
+- Hex-Rays may invent a pseudo variable (for example `savedregs_anchor`) and treat it like a normal argument.
+- In this sample, assembly shows `call mw_decrypt` with no pushes from `LogWrite`, so the correct function boundary model is `void __cdecl mw_decrypt(void)` for decompilation purposes.
+
+## Troubleshooting (The Stuff That Actually Breaks)
+
+These are the common failure modes we hit while iterating:
+
+1. Emulation crashes early with reads from `0x0000003C` or other low addresses.
+Fix:
+- Map the NULL page and place a minimal DOS+PE signature there (so “base==0” reads don’t fault immediately).
+
+2. Breakpoint not reached / control flow returns to `0x41414141`.
+Explanation:
+- That “fake RET” is a guardrail: the emulator used a sentinel return address so we can stop cleanly when the DLL returns.
+Fix:
+- Ensure you are running the correct `--mode` (`logwrite`), and that stubs are returning to the correct call sites.
+
+3. Stage1 disassembly looks like nonsense (`in`, `out`, `retf`, `int XX`), or loops forever.
+Explanation:
+- Stage1 is intentionally hostile to simplistic emulation (exception-driven control flow and junk opcodes).
+Fix:
+- Don’t brute force stage1 execution. Dump bytes and do the offline transforms instead (this is the core design of this workflow).
+
+4. VirusTotal says the patched PE is “invalid-signature”.
+Explanation:
+- Authenticode signature verification fails after any byte modifications.
+Fix:
+- None required; this is expected. Validate via diff-bytes and PE structure instead.
+
+## Assembly Walkthrough (With Explicit Image Requests)
+
+This section is intended for the final published write-up where readers want to see concrete assembly context, not only script output.
+
+### A) `log.dll!LogWrite` Handoff Boundary
+
+Representative pattern around the stage1 boundary:
+
+```asm
+.text:10001B20 call    mw_decrypt
+.text:10001B25 mov     eax, [g_decrypted_buf]
+.text:10001B2A push    offset old_protect
+.text:10001B2F push    40h
+.text:10001B31 push    200000h
+.text:10001B36 push    eax
+.text:10001B37 call    ds:VirtualProtect
+.text:10001B3D ...     ; build 25-dword struct
+.text:10001B5E call    eax
+```
+
+Why this matters:
+- This is the exact boundary where stage0 is still tractable and stage1 begins.
+- It justifies extracting bytes at the breakpoint instead of emulating full stage1 behavior.
+
+<!-- IMAGE_REQUEST: IDA screenshot centered on log.dll around 0x10001B20..0x10001C11 showing VirtualProtect + call eax handoff. -->
+
+### B) `mw_decrypt` Byte-Transform Core
+
+Representative byte loop behavior (matching the offline script):
+
+```asm
+movzx   ecx, byte ptr [esi+edi]   ; encrypted byte
+movzx   eax, byte ptr [key+edi&7]
+add     ecx, eax
+xor     ecx, eax
+sub     ecx, eax
+mov     [esi+edi], cl
+inc     edi
+cmp     edi, region_size
+jb      short decrypt_loop
+```
+
+Why this matters:
+- It ties the reversing claim directly to the implemented transform in `offline_extract_stage2.py`.
+- It explains why one correct pass over the 5 regions is sufficient in this sample workflow.
+
+<!-- IMAGE_REQUEST: side-by-side screenshot: IDA assembly of mw_decrypt loop + corresponding Python loop in scripts/offline_extract_stage2.py. -->
+
+### C) Stage1 Arg-Struct Region Mapping
+
+The decryption loop depends on stage1-provided region metadata:
+
+```text
+RVA list : 0x1000, 0x24000, 0x2D000, 0x30000, 0x31000
+Size list: 0x23000, 0x8E00, 0x0C00, 0x0200, 0x1C00
+Total    : 0x2E800 bytes
+```
+
+Why this matters:
+- It explains why patched bytes are concentrated in specific ranges.
+- It connects assembly/runtime state to `patched_diff.json` output.
+
+<!-- IMAGE_REQUEST: screenshot of emulator/log output showing arg-struct values plus a second screenshot of output/patched_diff.txt ranges. -->
+
+### D) RC4 Config Decryption Path Fingerprint
+
+Typical config path markers in the main module:
+
+```asm
+push    980h            ; size
+push    30808h          ; offset
+lea     ecx, [rc4_state]
+call    rc4_ksa_prga
+```
+
+Why this matters:
+- It anchors the static analysis to observable constants (`0x980`, `0x30808`).
+- It demonstrates that config extraction was not guessed from strings alone.
+
+<!-- IMAGE_REQUEST: disassembler screenshot at the function referencing 0x980/0x30808, with cross-references visible. -->
+
+### E) Loader API Hash Resolution Callsite
+
+Resolver pattern you want to show in the article:
+
+```asm
+push    47C204CAh       ; hash for VirtualProtect in this sample context
+call    api_hash_resolver
+mov     [ebp+virtualprotect_ptr], eax
+```
+
+Why this matters:
+- It visually explains why the rainbow table and IDA enum/comment automation add immediate value.
+- It helps readers connect opaque constants to concrete API behavior.
+
+<!-- IMAGE_REQUEST: before/after screenshot from ida_chrysalis_api_hash_resolver.py showing raw hash constant vs resolved API annotation. -->
+
+## Screenshots To Capture (For A Technical Report Or Blog)
+
+If you want a “Rapid7-like” write-up with visuals, these are the screenshots that add real value:
+
+1. `input/` file listing and SHA-256 hashes matching Rapid7 (terminal).
+2. `log.dll` exports showing `LogInit` and `LogWrite` (PE viewer / Ghidra/IDA).
+3. Emulator run hitting the breakpoint at `0x10001C11` and printing `EAX=...` plus dumped file hashes (terminal).
+4. Hex view of `shellcode.bin` at its dumped base (show it’s raw, non-PE).
+5. Offline decrypt step printing region RVAs/sizes and output `main_module_patched.exe` SHA-256 (terminal).
+6. A PE header view of `main_module_patched.exe` showing:
+   - ImageBase `0x400000`
+   - EntryPoint RVA `0x471B0`
+   - Import directory present
+7. Imports view listing the DLLs Rapid7 mentions (kernel32/user32/advapi32/shlwapi/wininet/etc).
+8. Config decrypt output showing the C2 URL and UA string (either strings view or a small hexdump + decoded text).
+9. `pe_find.py` output locating the `0x980` constant and mapping to VA (terminal), then a screenshot of that VA in the disassembler to show where you started tracing the config path.
+10. `ida_chrysalis_api_hash_resolver.py` output panel showing canary + resolved annotations.
+11. `ida_c2_dispatch_lifter.py` output panel showing ranked dispatcher candidates.
+12. One patched-range highlighted view from `ida_main_module_triage.py` and one hash-annotation example from `ida_hash_table_apply.py`.
+
+## Flowchart (Pipeline Overview)
+
+The pipeline diagram is captured in `pipeline_flowchart.dot` and can be rendered to:
+- `output/pipeline_flowchart.png`
+
+Render command (requires Graphviz `dot`):
+```bash
+python3 scripts/render_flowchart.py --out output/pipeline_flowchart.png
+```
+
+If `dot` is not installed on macOS, install Graphviz (e.g. via Homebrew) and re-run the command.
+
+## Reproduction Commands
+
+See `README.md` for the exact command lines and expected outputs.
+
+## What’s Next (If You Want Runtime Behavior)
+
+At this point you have:
+- A decrypted PE-like module you can reverse statically.
+- A decrypted config blob you can parse.
+
+If you want to observe C2 protocol behavior safely, you still shouldn’t “run it for real” on your host. Options:
+- Continue expanding the Unicorn stubs and emulate deeper (time-consuming).
+- Use a Windows VM and detonate in an isolated sandbox (more faithful).
+- Use targeted static lifting/decompilation for specific routines (best ROI for this sample family).
+
+For most reverse engineering goals (IOCs, API usage, config extraction, control-flow understanding), the offline artifacts are already enough.
+
+## Closing Notes
+
+The key idea is to split the problem into two parts:
+- Emulate only the loader layer that is stable and WinAPI-like (`log.dll`).
+- Treat everything after that as a byte recovery problem (documented transforms + deterministic decrypt), not “make every instruction execute correctly”.
