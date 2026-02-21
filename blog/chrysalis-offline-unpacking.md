@@ -65,6 +65,8 @@ The hash table is the trust boundary for the whole report. If a reader cannot ma
 
 All hashes below are SHA-256 values from the workflow run referenced in this report.
 
+<div class="hash-table-lg">
+
 | Artifact | Role | SHA-256 | Download |
 |---|---|---|---|
 | `input/log.dll` | Input sample | `3bdc4c0637591533f1d4198a72a33426c01f69bd2e15ceee547866f65e26b7ad` | Not redistributed |
@@ -77,6 +79,8 @@ All hashes below are SHA-256 values from the workflow run referenced in this rep
 | `output/config_decrypted.bin` | Produced (decrypted config blob) | `aad018195c5ee6c2e3c00bc3c95313cb4301218534765472124ebc7b5fb7bcb1` | Not redistributed |
 | `output/patched_diff.json` | Produced report | `a5fdfdebfd367cabae0c41fa91846a6f54d585fa0090f86d8db0d4cd84facf4f` | [download]({{ "/downloads/chrysalis/reports/binary_diff/patched_diff.json" | relative_url }}) |
 | `output/patched_diff.txt` | Produced report | `b462aa52be01625c72965b3b99c2ef37ccc64e834e4fd9cba624a0e6a6c1f5f7` | [download]({{ "/downloads/chrysalis/reports/binary_diff/patched_diff.txt" | relative_url }}) |
+
+</div>
 
 ## What You Get At The End
 
@@ -698,6 +702,33 @@ If you want to observe C2 protocol behavior safely, you still shouldn’t “run
 - Use targeted static lifting/decompilation for specific routines (best ROI for this sample family).
 
 For most reverse engineering goals (IOCs, API usage, config extraction, control-flow understanding), the offline artifacts are already enough.
+
+## Genetics Matching (Patching Analysis)
+
+This section summarizes patch “genetics”: which code regions changed, and how baseline instructions align against patched instructions in focused side-by-side slices. The goal is to provide visual evidence of transformation patterns without dumping full function listings inline.
+
+### Patch Range Genome Map
+
+The map below compresses all modified file-offset ranges from `patched_diff.json` into one timeline.
+
+<img src="{{ '/assets/images/patching/patch_range_map.svg' | relative_url }}" alt="Patch range map from patched_diff.json" loading="lazy" style="max-width:100%;height:auto;" />
+
+### Side-By-Side Diff Slices (Focused)
+
+These are compact slices extracted from `asm_side_by_side_*.csv` outputs (generated from the DB diff workflow). They are intentionally trimmed to representative instruction windows so readers can quickly compare baseline vs patched behavior.
+
+<img src="{{ '/assets/images/patching/patch_snippet_0043CD83.svg' | relative_url }}" alt="Side-by-side diff snippet 0x0043CD83" loading="lazy" style="max-width:100%;height:auto;" />
+
+<img src="{{ '/assets/images/patching/patch_snippet_004863A0.svg' | relative_url }}" alt="Side-by-side diff snippet 0x004863A0" loading="lazy" style="max-width:100%;height:auto;" />
+
+<img src="{{ '/assets/images/patching/patch_snippet_0048A890.svg' | relative_url }}" alt="Side-by-side diff snippet 0x0048A890" loading="lazy" style="max-width:100%;height:auto;" />
+
+Full raw diff sources used for these visuals:
+- `downloads/chrysalis/reports/db_diff_reports/asm_side_by_side_0x0043CD83.csv`
+- `downloads/chrysalis/reports/db_diff_reports/asm_side_by_side_0x004863A0.csv`
+- `downloads/chrysalis/reports/db_diff_reports/asm_side_by_side_0x0048A890.csv`
+- `downloads/chrysalis/reports/binary_diff/patched_diff.txt`
+- `downloads/chrysalis/reports/binary_diff/patched_diff.json`
 
 ## Closing Notes
 

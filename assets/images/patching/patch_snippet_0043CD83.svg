@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="426" viewBox="0 0 1400 426">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#07142f"/><stop offset="100%" stop-color="#0d1f47"/></linearGradient>
+</defs>
+<rect width="100%" height="100%" fill="url(#bg)"/>
+<rect x="16" y="16" width="1368" height="56" rx="10" fill="#0f2a62" fill-opacity="0.74" stroke="#7aa2ff" stroke-opacity="0.45"/>
+<text x="30" y="51" fill="#dce9ff" font-family="monospace" font-size="24" font-weight="700">Patch Snippet 0x0043CD83 - Side-by-Side Diff Slice</text>
+<rect x="16" y="84" width="670" height="34" rx="6" fill="#122b62" fill-opacity="0.74"/>
+<rect x="714" y="84" width="670" height="34" rx="6" fill="#122b62" fill-opacity="0.74"/>
+<text x="30" y="108" fill="#b6d0ff" font-family="monospace" font-size="16" font-weight="700">Baseline (legit)</text>
+<text x="728" y="108" fill="#b6d0ff" font-family="monospace" font-size="16" font-weight="700">Patched (decrypted/modified)</text>
+<rect x="16" y="108" width="670" height="26" fill="#0c1d45"/>
+<rect x="714" y="108" width="670" height="26" fill="#0c1d45"/>
+<text x="30" y="128" fill="#e7f0ff" font-family="monospace" font-size="14">0x0003CD83  push    0D8h</text>
+<text x="728" y="128" fill="#e7f0ff" font-family="monospace" font-size="14">0x0003CE58  jb      short loc_43CE5D</text>
+<rect x="16" y="138" width="670" height="26" fill="#0a1839"/>
+<rect x="714" y="138" width="670" height="26" fill="#0a1839"/>
+<text x="30" y="158" fill="#e7f0ff" font-family="monospace" font-size="14">0x0003CD88  mov     eax, offset loc_490EF6</text>
+<text x="728" y="158" fill="#e7f0ff" font-family="monospace" font-size="14">0x0003CE5A  mov     eax, [ebp+var_40]</text>
+<rect x="16" y="168" width="670" height="26" fill="#0c1d45"/>
+<rect x="714" y="168" width="670" height="26" fill="#0c1d45"/>
+<text x="30" y="188" fill="#e7f0ff" font-family="monospace" font-size="14">0x0003CD8D  call    __EH_prolog3_GS</text>
+<text x="728" y="188" fill="#e7f0ff" font-family="monospace" font-size="14">0x0003CE5D  cmp     byte ptr [eax], 7Fh</text>
+<rect x="16" y="198" width="670" height="26" fill="#0a1839"/>
+<rect x="714" y="198" width="670" height="26" fill="#0a1839"/>
+<text x="30" y="218" fill="#e7f0ff" font-family="monospace" font-size="14">0x0003CD92  mov     eax, [ebp+arg_0]</text>
+<text x="728" y="218" fill="#e7f0ff" font-family="monospace" font-size="14">0x0003CE60  jz      short loc_43CEC1</text>
+<rect x="16" y="228" width="670" height="26" fill="#0c1d45"/>
+<rect x="714" y="228" width="670" height="26" fill="#0c1d45"/>
+<text x="30" y="248" fill="#e7f0ff" font-family="monospace" font-size="14">0x0003CD95  mov     edi, [ebp+arg_10]</text>
+<text x="728" y="248" fill="#e7f0ff" font-family="monospace" font-size="14">0x0003CE62  cmp     [ebp+var_2C], 10h</text>
+<rect x="16" y="258" width="670" height="26" fill="#0a1839"/>
+<rect x="714" y="258" width="670" height="26" fill="#0a1839"/>
+<text x="30" y="278" fill="#e7f0ff" font-family="monospace" font-size="14">0x0003CD98  mov     [ebp+var_9C], eax</text>
+<text x="728" y="278" fill="#e7f0ff" font-family="monospace" font-size="14">0x0003CE66  lea     eax, [ebp+var_40]</text>
+<rect x="16" y="288" width="670" height="26" fill="#0c1d45"/>
+<rect x="714" y="288" width="670" height="26" fill="#0c1d45"/>
+<text x="30" y="308" fill="#e7f0ff" font-family="monospace" font-size="14">0x0003CD9E  movzx   eax, [ebp+arg_14]</text>
+<text x="728" y="308" fill="#e7f0ff" font-family="monospace" font-size="14">0x0003CE69  jb      short loc_43CE6E</text>
+<rect x="16" y="318" width="670" height="26" fill="#0a1839"/>
+<rect x="714" y="318" width="670" height="26" fill="#0a1839"/>
+<text x="30" y="338" fill="#e7f0ff" font-family="monospace" font-size="14">0x0003CDA2  mov     [ebp+var_84], eax</text>
+<text x="728" y="338" fill="#e7f0ff" font-family="monospace" font-size="14">0x0003CE6B  mov     eax, [ebp+var_40]</text>
+<rect x="16" y="348" width="670" height="26" fill="#0c1d45"/>
+<rect x="714" y="348" width="670" height="26" fill="#0c1d45"/>
+<text x="30" y="368" fill="#e7f0ff" font-family="monospace" font-size="14">0x0003CDA8  movzx   eax, [ebp+arg_34]</text>
+<text x="728" y="368" fill="#e7f0ff" font-family="monospace" font-size="14">0x0003CE6E  cmp     byte ptr [eax], 0</text>
+<rect x="16" y="378" width="670" height="26" fill="#0a1839"/>
+<rect x="714" y="378" width="670" height="26" fill="#0a1839"/>
+<text x="30" y="398" fill="#e7f0ff" font-family="monospace" font-size="14">0x0003CDAC  mov     [ebp+var_80], edi</text>
+<text x="728" y="398" fill="#e7f0ff" font-family="monospace" font-size="14">0x0003CE71  jle     short loc_43CEC1</text>
+</svg>
