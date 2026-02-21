@@ -1,0 +1,42 @@
+{
+  "orig": "input/BluetoothService.exe",
+  "patched": "output/main_module_patched.exe",
+  "orig_sha256": "2da00de67720f5f13b17e9d985fe70f10f153da60c9ab1086fe58f069a156924",
+  "patched_sha256": "bd0fb50084a21876fdbcf33fc7cf1949b78020f9e169086b2dd0b6aae28ad359",
+  "num_ranges": 4,
+  "total_changed_bytes": 190464,
+  "ranges": [
+    {
+      "file_off_start": 1024,
+      "file_off_end": 180736,
+      "size": 179712,
+      "rva": 4096,
+      "va": 4198400,
+      "section": ".text"
+    },
+    {
+      "file_off_start": 181248,
+      "file_off_end": 184320,
+      "size": 3072,
+      "rva": 184320,
+      "va": 4378624,
+      "section": ".text"
+    },
+    {
+      "file_off_start": 193536,
+      "file_off_end": 194048,
+      "size": 512,
+      "rva": 196608,
+      "va": 4390912,
+      "section": ".text"
+    },
+    {
+      "file_off_start": 197632,
+      "file_off_end": 204800,
+      "size": 7168,
+      "rva": 200704,
+      "va": 4395008,
+      "section": ".text"
+    }
+  ]
+}

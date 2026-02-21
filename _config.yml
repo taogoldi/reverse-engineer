@@ -1,7 +1,18 @@
 title: Reverse Engineer
 description: Public reverse engineering write-ups and notes
-theme: jekyll-theme-hacker
 url: "https://taogoldi.github.io"
 baseurl: "/reverse-engineer"
 markdown: kramdown
 permalink: /blog/:title/
+
+remote_theme: "mmistakes/minimal-mistakes@4.26.2"
+minimal_mistakes_skin: "neon"
+
+plugins:
+  - jekyll-include-cache
+
+include:
+  - _pages
+
+author:
+  name: "taogoldi"

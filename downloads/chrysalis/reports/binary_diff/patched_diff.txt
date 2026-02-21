@@ -1,0 +1,9 @@
+orig:    input/BluetoothService.exe sha256=2da00de67720f5f13b17e9d985fe70f10f153da60c9ab1086fe58f069a156924 size=950592
+patched: output/main_module_patched.exe sha256=bd0fb50084a21876fdbcf33fc7cf1949b78020f9e169086b2dd0b6aae28ad359 size=950592
+ranges:  4 total_changed_bytes=190464
+
+index  off_start  off_end    size    rva       va        section
+    0  0x00000400 0x0002C200 0x02BE00  0x001000 0x00401000 .text
+    1  0x0002C400 0x0002D000 0x000C00  0x02D000 0x0042D000 .text
+    2  0x0002F400 0x0002F600 0x000200  0x030000 0x00430000 .text
+    3  0x00030400 0x00032000 0x001C00  0x031000 0x00431000 .text

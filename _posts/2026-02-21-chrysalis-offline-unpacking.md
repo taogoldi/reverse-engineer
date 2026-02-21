@@ -1,18 +1,67 @@
 ---
-layout: default
+layout: single
 title: "From log.dll To A Decrypted Chrysalis Main Module (Offline On macOS)"
 date: 2026-02-21 00:00:00 +0000
 permalink: /blog/chrysalis-offline-unpacking/
+toc: true
 ---
 
-# From `log.dll` To A Decrypted Chrysalis Main Module (Offline On macOS)
-
 This write-up documents an end-to-end offline workflow for unpacking the Lotus Blossom “Chrysalis” chain described by Rapid7 (Feb 2026), without running the malware in a Windows debugger.
+
+## Summary and Attribution
+
+Primary upstream research and malware-family analysis credit goes to Rapid7:
+- [The Chrysalis Backdoor: A Deep Dive into Lotus Blossom’s toolkit (Rapid7)](https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/)
+
+This post focuses on reproducibility and analyst workflow:
+- deterministic offline extraction on macOS/Linux
+- scriptable unpacking and config decryption
+- SQLite/CFG diff generation for reverse engineering handoff
 
 The constraints are practical:
 - The loader and payload are x86 Windows artifacts.
 - The analysis environment is an ARM Mac.
 - We still want deterministic outputs we can reverse in Ghidra/IDA and share as hashes/artifacts.
+
+## Downloads
+
+### Source and tooling bundles
+
+- Full repository zip: [Download](https://github.com/taogoldi/reverse-engineer/archive/refs/heads/main.zip)
+- Scripts/emulators bundle: [Folder](https://github.com/taogoldi/reverse-engineer/tree/main/downloads/chrysalis/scripts)
+- IDA automation scripts: [Folder](https://github.com/taogoldi/reverse-engineer/tree/main/downloads/chrysalis/ida)
+- Notebooks bundle: [Folder](https://github.com/taogoldi/reverse-engineer/tree/main/downloads/chrysalis/notebooks)
+- DB diff CSV reports: [Folder](https://github.com/taogoldi/reverse-engineer/tree/main/downloads/chrysalis/reports/db_diff_reports)
+- Binary diff results: [Folder](https://github.com/taogoldi/reverse-engineer/tree/main/downloads/chrysalis/reports/binary_diff)
+- Pipeline flowchart assets: [Folder](https://github.com/taogoldi/reverse-engineer/tree/main/downloads/chrysalis/docs)
+
+### Direct files often requested
+
+- `run_chrysalis_pipeline.py`: [raw](https://raw.githubusercontent.com/taogoldi/reverse-engineer/main/downloads/chrysalis/scripts/run_chrysalis_pipeline.py)
+- `emulate_logwrite_dump_shellcode.py`: [raw](https://raw.githubusercontent.com/taogoldi/reverse-engineer/main/downloads/chrysalis/scripts/emulate_logwrite_dump_shellcode.py)
+- `offline_extract_stage2.py`: [raw](https://raw.githubusercontent.com/taogoldi/reverse-engineer/main/downloads/chrysalis/scripts/offline_extract_stage2.py)
+- `render_cfg_diff_html.py`: [raw](https://raw.githubusercontent.com/taogoldi/reverse-engineer/main/downloads/chrysalis/scripts/render_cfg_diff_html.py)
+- `sqlite_diff_report.py`: [raw](https://raw.githubusercontent.com/taogoldi/reverse-engineer/main/downloads/chrysalis/scripts/sqlite_diff_report.py)
+- `patched_diff.txt`: [raw](https://raw.githubusercontent.com/taogoldi/reverse-engineer/main/downloads/chrysalis/reports/binary_diff/patched_diff.txt)
+- `patched_diff.json`: [raw](https://raw.githubusercontent.com/taogoldi/reverse-engineer/main/downloads/chrysalis/reports/binary_diff/patched_diff.json)
+- `chrysalis_unpacking_walkthrough.ipynb`: [raw](https://raw.githubusercontent.com/taogoldi/reverse-engineer/main/downloads/chrysalis/notebooks/chrysalis_unpacking_walkthrough.ipynb)
+
+## File Hashes (Inputs and Produced Artifacts)
+
+All hashes below are SHA-256 values from the workflow run referenced in this report.
+
+| Artifact | Role | SHA-256 | Download |
+|---|---|---|---|
+| `input/log.dll` | Input sample | `3bdc4c0637591533f1d4198a72a33426c01f69bd2e15ceee547866f65e26b7ad` | Not redistributed |
+| `input/BluetoothService.exe` | Input sample | `2da00de67720f5f13b17e9d985fe70f10f153da60c9ab1086fe58f069a156924` | Not redistributed |
+| `input/encrypted_shellcode.bin` | Input sample | `77bfea78def679aa1117f569a35e8fd1542df21f7e00e27f192c907e61d63a2e` | Not redistributed |
+| `output/shellcode.bin` | Produced (stage1 dump) | `4416729d92e22ccb93e26c6896efe056b851a914727969f0ff604da4ef18ccfa` | Not redistributed (malware-derived) |
+| `output/shellcode_full.bin` | Produced (full stage1 region) | `83f17d256d010ebfec8d58c4217f54a73d8237aa51ebab75c3e50f111d883d49` | Not redistributed (malware-derived) |
+| `output/main_module_patched.exe` | Produced (patched module) | `bd0fb50084a21876fdbcf33fc7cf1949b78020f9e169086b2dd0b6aae28ad359` | Not redistributed (malware-derived) |
+| `output/main_module_mem.bin` | Produced (memory image) | `129a91eaa5e03b112ecfccd858b8c7fc4f482158a53d8300f2505d7c120f87d3` | Not redistributed (malware-derived) |
+| `output/config_decrypted.bin` | Produced (decrypted config blob) | `aad018195c5ee6c2e3c00bc3c95313cb4301218534765472124ebc7b5fb7bcb1` | Not redistributed |
+| `output/patched_diff.json` | Produced report | `a5fdfdebfd367cabae0c41fa91846a6f54d585fa0090f86d8db0d4cd84facf4f` | [raw](https://raw.githubusercontent.com/taogoldi/reverse-engineer/main/downloads/chrysalis/reports/binary_diff/patched_diff.json) |
+| `output/patched_diff.txt` | Produced report | `b462aa52be01625c72965b3b99c2ef37ccc64e834e4fd9cba624a0e6a6c1f5f7` | [raw](https://raw.githubusercontent.com/taogoldi/reverse-engineer/main/downloads/chrysalis/reports/binary_diff/patched_diff.txt) |
 
 ## What You Get At The End
 
