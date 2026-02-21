@@ -75,8 +75,6 @@ The hash table is the trust boundary for the whole report. If a reader cannot ma
 
 All hashes below are SHA-256 values from the workflow run referenced in this report.
 
-<div class="hash-table-lg">
-
 | Artifact | Role | SHA-256 | Download |
 |---|---|---|---|
 | `input/log.dll` | Input sample | `3bdc4c0637591533f1d4198a72a33426c01f69bd2e15ceee547866f65e26b7ad` | Not redistributed |
@@ -89,8 +87,6 @@ All hashes below are SHA-256 values from the workflow run referenced in this rep
 | `output/config_decrypted.bin` | Produced (decrypted config blob) | `aad018195c5ee6c2e3c00bc3c95313cb4301218534765472124ebc7b5fb7bcb1` | Not redistributed |
 | `output/patched_diff.json` | Produced report | `a5fdfdebfd367cabae0c41fa91846a6f54d585fa0090f86d8db0d4cd84facf4f` | [download]({{ "/downloads/chrysalis/reports/binary_diff/patched_diff.json" | relative_url }}) |
 | `output/patched_diff.txt` | Produced report | `b462aa52be01625c72965b3b99c2ef37ccc64e834e4fd9cba624a0e6a6c1f5f7` | [download]({{ "/downloads/chrysalis/reports/binary_diff/patched_diff.txt" | relative_url }}) |
-
-</div>
 
 ## What You Get At The End
 
