@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="426" viewBox="0 0 1400 426">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#07142f"/><stop offset="100%" stop-color="#0d1f47"/></linearGradient>
+</defs>
+<rect width="100%" height="100%" fill="url(#bg)"/>
+<rect x="16" y="16" width="1368" height="56" rx="10" fill="#0f2a62" fill-opacity="0.74" stroke="#7aa2ff" stroke-opacity="0.45"/>
+<text x="30" y="51" fill="#dce9ff" font-family="monospace" font-size="24" font-weight="700">Patch Snippet 0x004863A0 - Side-by-Side Diff Slice</text>
+<rect x="16" y="84" width="670" height="34" rx="6" fill="#122b62" fill-opacity="0.74"/>
+<rect x="714" y="84" width="670" height="34" rx="6" fill="#122b62" fill-opacity="0.74"/>
+<text x="30" y="108" fill="#b6d0ff" font-family="monospace" font-size="16" font-weight="700">Baseline (legit)</text>
+<text x="728" y="108" fill="#b6d0ff" font-family="monospace" font-size="16" font-weight="700">Patched (decrypted/modified)</text>
+<rect x="16" y="108" width="670" height="26" fill="#0c1d45"/>
+<rect x="714" y="108" width="670" height="26" fill="#0c1d45"/>
+<text x="30" y="128" fill="#e7f0ff" font-family="monospace" font-size="14">0x004863A1  mov    esp.4, ebp.4</text>
+<text x="728" y="128" fill="#e7f0ff" font-family="monospace" font-size="14">0x0008650D  mov     [ebp+var_4], 3</text>
+<rect x="16" y="138" width="670" height="26" fill="#0a1839"/>
+<rect x="714" y="138" width="670" height="26" fill="#0a1839"/>
+<text x="30" y="158" fill="#e7f0ff" font-family="monospace" font-size="14">0x004863B1  mov    #0.1, cf.1</text>
+<text x="728" y="158" fill="#e7f0ff" font-family="monospace" font-size="14">0x00086514  mov     ecx, [ebp+var_854]</text>
+<rect x="16" y="168" width="670" height="26" fill="#0c1d45"/>
+<rect x="714" y="168" width="670" height="26" fill="#0c1d45"/>
+<text x="30" y="188" fill="#e7f0ff" font-family="monospace" font-size="14">0x004863B1  mov    #0.1, zf.1</text>
+<text x="728" y="188" fill="#e7f0ff" font-family="monospace" font-size="14">0x0008651A  and     ecx, 1</text>
+<rect x="16" y="198" width="670" height="26" fill="#0a1839"/>
+<rect x="714" y="198" width="670" height="26" fill="#0a1839"/>
+<text x="30" y="218" fill="#e7f0ff" font-family="monospace" font-size="14">0x004863B1  mov    #0.1, of.1</text>
+<text x="728" y="218" fill="#e7f0ff" font-family="monospace" font-size="14">0x0008651D  jz      short loc_486531</text>
+<rect x="16" y="228" width="670" height="26" fill="#0c1d45"/>
+<rect x="714" y="228" width="670" height="26" fill="#0c1d45"/>
+<text x="30" y="248" fill="#e7f0ff" font-family="monospace" font-size="14">0x004863B1  und    sf.1</text>
+<text x="728" y="248" fill="#e7f0ff" font-family="monospace" font-size="14">0x0008651F  and     [ebp+var_854], 0FFFFFFFEh</text>
+<rect x="16" y="258" width="670" height="26" fill="#0a1839"/>
+<rect x="714" y="258" width="670" height="26" fill="#0a1839"/>
+<text x="30" y="278" fill="#e7f0ff" font-family="monospace" font-size="14">0x004863B1  und    pf.1</text>
+<text x="728" y="278" fill="#e7f0ff" font-family="monospace" font-size="14">0x00086526  lea     ecx, [ebp+var_A84]</text>
+<rect x="16" y="288" width="670" height="26" fill="#0c1d45"/>
+<rect x="714" y="288" width="670" height="26" fill="#0c1d45"/>
+<text x="30" y="308" fill="#e7f0ff" font-family="monospace" font-size="14">0x004863BC  mov    #0.1, cf.1</text>
+<text x="728" y="308" fill="#e7f0ff" font-family="monospace" font-size="14">0x0008652C  call    sub_406180</text>
+<rect x="16" y="318" width="670" height="26" fill="#0a1839"/>
+<rect x="714" y="318" width="670" height="26" fill="#0a1839"/>
+<text x="30" y="338" fill="#e7f0ff" font-family="monospace" font-size="14">0x004863BC  mov    #0.1, of.1</text>
+<text x="728" y="338" fill="#e7f0ff" font-family="monospace" font-size="14">0x00086531  mov     [ebp+var_860], 0</text>
+<rect x="16" y="348" width="670" height="26" fill="#0c1d45"/>
+<rect x="714" y="348" width="670" height="26" fill="#0c1d45"/>
+<text x="30" y="368" fill="#e7f0ff" font-family="monospace" font-size="14">0x004863BC  und    zf.1</text>
+<text x="728" y="368" fill="#e7f0ff" font-family="monospace" font-size="14">0x0008653B  jmp     loc_48777F</text>
+<rect x="16" y="378" width="670" height="26" fill="#0a1839"/>
+<rect x="714" y="378" width="670" height="26" fill="#0a1839"/>
+<text x="30" y="398" fill="#e7f0ff" font-family="monospace" font-size="14">0x004863BC  und    sf.1</text>
+<text x="728" y="398" fill="#e7f0ff" font-family="monospace" font-size="14">0x00086540  push    offset aSupporttoolExe_0; "supporttool.exe"</text>
+</svg>
