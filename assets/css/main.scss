@@ -1,0 +1,28 @@
+---
+---
+
+@import "minimal-mistakes/skins/neon";
+@import "minimal-mistakes";
+
+/* Modern, high-contrast tweaks on top of the neon skin */
+.page__hero,
+.masthead,
+.greedy-nav,
+.archive__subtitle {
+  border-bottom: 1px solid rgba(90, 255, 160, 0.28);
+}
+
+.page__content a,
+.archive__item-title a {
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.15em;
+}
+
+code,
+pre {
+  border-radius: 8px;
+}
+
+.notice--info {
+  border-left: 4px solid #5aff9f;
+}

@@ -1,0 +1,76 @@
+digraph pipeline {
+  rankdir=LR;
+  bgcolor="white";
+  graph [fontname="Helvetica"];
+  node  [fontname="Helvetica", shape=box, style="rounded,filled", fillcolor="#F7F7F7", color="#444444"];
+  edge  [fontname="Helvetica", color="#444444"];
+
+  subgraph cluster_inputs {
+    label="Inputs (input/)";
+    color="#888888";
+    style="rounded";
+    in_logdll   [label="input/log.dll\nsha256: 3bdc4c...b7ad", fillcolor="#FFF8E8"];
+    in_btblob   [label="input/encrypted_shellcode.bin\n(\"BluetoothService\")\nsha256: 77bfea...3a2e", fillcolor="#FFF8E8"];
+    in_container[label="input/BluetoothService.exe\n(Bitdefender container)\nsha256: 2da00d...6924", fillcolor="#FFF8E8"];
+  }
+
+  subgraph cluster_stage0 {
+    label="Stage 0: log.dll emulation";
+    color="#888888";
+    style="rounded";
+    s0 [label="emulate_logwrite_dump_shellcode.py\n--mode logwrite\n- stubs Heap*/Virtual*\n- break @ 0x10001C11\n- dump stage1 bytes", fillcolor="#E8F4FF"];
+    out_shell1   [label="output/shellcode.bin\n(stage1, 0x31188)", fillcolor="#E8FFE8"];
+    out_shell1f  [label="output/shellcode_full.bin\n(stage1 full, 0x200000)", fillcolor="#E8FFE8"];
+    out_log0     [label="output/logwrite_run.log\n(stdout capture)", fillcolor="#E8FFE8"];
+  }
+
+  subgraph cluster_stage1 {
+    label="Stage 1: offline main-module decrypt";
+    color="#888888";
+    style="rounded";
+    s1 [label="offline_extract_stage2.py\n- key: \"gQ2JR&9;\"\n- 5 regions (RVAs/sizes)\n- decrypt in-place", fillcolor="#E8F4FF"];
+    out_patched [label="output/main_module_patched.exe\n(container + decrypted regions)\n(signature invalid expected)", fillcolor="#E8FFE8"];
+    out_memimg  [label="output/main_module_mem.bin\n(decrypted in-memory image)\n(optional)", fillcolor="#E8FFE8"];
+  }
+
+  subgraph cluster_config {
+    label="Config decrypt";
+    color="#888888";
+    style="rounded";
+    s2 [label="decrypt_btservice_config.py\nRC4:\n- off 0x30808 size 0x980\n- key: qwhvb^435h&*7", fillcolor="#E8F4FF"];
+    out_cfg [label="output/config_decrypted.bin\n(RC4 plaintext config)", fillcolor="#E8FFE8"];
+  }
+
+  subgraph cluster_helpers {
+    label="Helpers";
+    color="#888888";
+    style="rounded";
+    h_diff [label="diff_patched_pe.py\norig vs patched\n-> changed ranges\n(file off -> RVA/VA)", fillcolor="#F0F0FF"];
+    out_diff_txt [label="output/patched_diff.txt", fillcolor="#E8FFE8"];
+    out_diff_json [label="output/patched_diff.json", fillcolor="#E8FFE8"];
+
+    h_find [label="pe_find.py\nfind constants/strings\nmap off -> RVA/VA", fillcolor="#F0F0FF"];
+    h_hash [label="api_hash_rainbow.py (Windows)\nexport hash table generator", fillcolor="#F0F0FF"];
+  }
+
+  // edges
+  in_logdll -> s0;
+  in_btblob -> s0 [label="--payload"];
+  s0 -> out_shell1;
+  s0 -> out_shell1f;
+  s0 -> out_log0;
+
+  out_shell1f -> s1 [label="--stage1"];
+  in_container -> s1 [label="--image / --container-pe"];
+  s1 -> out_patched;
+  s1 -> out_memimg;
+
+  in_btblob -> s2;
+  s2 -> out_cfg;
+
+  in_container -> h_diff [label="--orig"];
+  out_patched -> h_diff [label="--patched"];
+  h_diff -> out_diff_txt;
+  h_diff -> out_diff_json;
+}
+
