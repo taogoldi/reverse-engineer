@@ -678,7 +678,7 @@ The flowchart is useful for onboarding: it gives a one-screen model of where emu
 
 The diagram below reflects the current pipeline order in `run_chrysalis_pipeline.py`, including the SQLite diff reports and static-SVG CFG HTML generation stages.
 
-![Chrysalis Offline Unpacking Pipeline]({{ "/downloads/chrysalis/docs/pipeline_flowchart.png" | relative_url }})
+![Chrysalis Offline Unpacking Pipeline]({{ "/downloads/chrysalis/docs/pipeline_flowchart.png" | absolute_url }})
 
 Source DOT file (versioned in repo):
 - `downloads/chrysalis/docs/pipeline_flowchart.dot`
@@ -721,17 +721,17 @@ This section summarizes patch “genetics”: which code regions changed, and ho
 
 The map below compresses all modified file-offset ranges from `patched_diff.json` into one timeline.
 
-<img src="{{ '/assets/images/patching/patch_range_map.svg' | relative_url }}" alt="Patch range map from patched_diff.json" loading="lazy" style="max-width:100%;height:auto;" />
+<img src="{{ '/assets/images/patching/patch_range_map.svg' | absolute_url }}" alt="Patch range map from patched_diff.json" loading="lazy" style="max-width:100%;height:auto;" />
 
 ### Side-By-Side Diff Slices (Focused)
 
 These are compact slices extracted from `asm_side_by_side_*.csv` outputs (generated from the DB diff workflow). They are intentionally trimmed to representative instruction windows so readers can quickly compare baseline vs patched behavior.
 
-<img src="{{ '/assets/images/patching/patch_snippet_0043CD83.svg' | relative_url }}" alt="Side-by-side diff snippet 0x0043CD83" loading="lazy" style="max-width:100%;height:auto;" />
+<img src="{{ '/assets/images/patching/patch_snippet_0043CD83.svg' | absolute_url }}" alt="Side-by-side diff snippet 0x0043CD83" loading="lazy" style="max-width:100%;height:auto;" />
 
-<img src="{{ '/assets/images/patching/patch_snippet_004863A0.svg' | relative_url }}" alt="Side-by-side diff snippet 0x004863A0" loading="lazy" style="max-width:100%;height:auto;" />
+<img src="{{ '/assets/images/patching/patch_snippet_004863A0.svg' | absolute_url }}" alt="Side-by-side diff snippet 0x004863A0" loading="lazy" style="max-width:100%;height:auto;" />
 
-<img src="{{ '/assets/images/patching/patch_snippet_0048A890.svg' | relative_url }}" alt="Side-by-side diff snippet 0x0048A890" loading="lazy" style="max-width:100%;height:auto;" />
+<img src="{{ '/assets/images/patching/patch_snippet_0048A890.svg' | absolute_url }}" alt="Side-by-side diff snippet 0x0048A890" loading="lazy" style="max-width:100%;height:auto;" />
 
 Full raw diff sources used for these visuals:
 - `downloads/chrysalis/reports/db_diff_reports/asm_side_by_side_0x0043CD83.csv`
