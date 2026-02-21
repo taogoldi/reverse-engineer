@@ -137,22 +137,23 @@ body.layout--home {
 
 /* Blog post pages */
 body.layout--single {
-  background-color: #020816;
+  background-color: #030a1f;
   background-image:
     repeating-linear-gradient(
       180deg,
-      rgba(158, 191, 255, 0.02) 0px,
-      rgba(158, 191, 255, 0.02) 1px,
+      rgba(158, 191, 255, 0.03) 0px,
+      rgba(158, 191, 255, 0.03) 1px,
       transparent 1px,
       transparent 5px
     ),
-    radial-gradient(circle at 15% 16%, rgba(65, 105, 225, 0.17), transparent 46%),
-    linear-gradient(180deg, rgba(2, 6, 23, 0.4), rgba(2, 6, 23, 0.78)),
+    radial-gradient(circle at 12% 14%, rgba(65, 105, 225, 0.3), transparent 44%),
+    radial-gradient(circle at 84% 72%, rgba(74, 216, 255, 0.2), transparent 46%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.2), rgba(2, 6, 23, 0.62)),
     url("../images/ai-circuit-bg.svg");
-  background-size: auto, 140% 140%, 100% 100%, cover;
-  background-position: 0 0, 18% 18%, center, center;
-  background-repeat: repeat, no-repeat, no-repeat, no-repeat;
-  background-attachment: fixed, fixed, fixed, fixed;
+  background-size: auto, 140% 140%, 140% 140%, 100% 100%, cover;
+  background-position: 0 0, 18% 18%, 84% 70%, center, center;
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+  background-attachment: fixed, fixed, fixed, fixed, fixed;
 }
 
 .layout--single .initial-content {
@@ -162,10 +163,16 @@ body.layout--single {
 .layout--single .page {
   position: relative;
   overflow: hidden;
-  background: rgba(6, 12, 30, 0.72);
+  background:
+    linear-gradient(160deg, rgba(14, 34, 83, 0.48), rgba(5, 16, 43, 0.58)),
+    radial-gradient(circle at 12% 22%, rgba(123, 166, 255, 0.2), transparent 42%),
+    url("../images/ai-circuit-bg.svg") center / cover no-repeat;
   border: 1px solid rgba(122, 162, 255, 0.22);
   border-radius: 12px;
-  box-shadow: 0 20px 42px rgba(3, 7, 18, 0.45);
+  box-shadow:
+    0 20px 42px rgba(3, 7, 18, 0.45),
+    inset 0 0 0 1px rgba(155, 188, 255, 0.08),
+    0 0 30px rgba(65, 105, 225, 0.18);
   padding: 1rem 1.05rem;
 }
 
@@ -174,9 +181,10 @@ body.layout--single {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(7, 20, 47, 0.42), rgba(7, 20, 47, 0.62)),
+    linear-gradient(180deg, rgba(7, 20, 47, 0.18), rgba(7, 20, 47, 0.42)),
     url("../images/ai-circuit-bg.svg") center / cover no-repeat;
-  opacity: 0.35;
+  opacity: 0.5;
+  mix-blend-mode: screen;
   pointer-events: none;
 }
 
@@ -186,7 +194,7 @@ body.layout--single {
 }
 
 .hash-table-lg table {
-  font-size: 0.84rem;
+  font-size: 0.88rem;
   line-height: 1.32;
 }
 
@@ -196,7 +204,7 @@ body.layout--single {
   }
 
   .hash-table-lg table {
-    font-size: 0.8rem;
+    font-size: 0.84rem;
   }
 }
 
