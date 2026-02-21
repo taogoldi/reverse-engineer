@@ -1,12 +1,14 @@
 ---
 layout: single
-title: "From log.dll To A Decrypted Chrysalis Main Module (Offline On macOS)"
+title: "From log.dll To A Decrypted Chrysalis Main Module"
 date: 2026-02-21 00:00:00 +0000
 permalink: /blog/chrysalis-offline-unpacking/
 toc: true
 ---
 
 This write-up documents an end-to-end offline workflow for unpacking the Lotus Blossom “Chrysalis” chain described by Rapid7 (Feb 2026), without running the malware in a Windows debugger.
+
+**Published:** `2026-02-21 00:00 UTC`
 
 The goal was to produce a workflow another analyst could rerun on a different machine and still land on the same bytes, the same hashes, and the same reversing pivots. Instead of relying on a fragile live-debugger session, this approach treats each stage as a measurable checkpoint and keeps the output evidence-centered.
 
