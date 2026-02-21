@@ -1,8 +1,14 @@
 # reverse-engineer
 
-Published write-ups and reverse engineering notes.
+Public reverse engineering write-ups and notes.
 
-## Posts
+## Public Site
 
-- [From `log.dll` To A Decrypted Chrysalis Main Module (Offline On macOS)](blog/chrysalis-offline-unpacking.md)
+- Home: [https://taogoldi.github.io/reverse-engineer/](https://taogoldi.github.io/reverse-engineer/)
+- Blog index: [https://taogoldi.github.io/reverse-engineer/blog/](https://taogoldi.github.io/reverse-engineer/blog/)
+- Chrysalis post: [https://taogoldi.github.io/reverse-engineer/blog/chrysalis-offline-unpacking/](https://taogoldi.github.io/reverse-engineer/blog/chrysalis-offline-unpacking/)
 
+## Source Files
+
+- Post source: `blog/chrysalis-offline-unpacking.md`
+- Published post: `_posts/2026-02-21-chrysalis-offline-unpacking.md`
