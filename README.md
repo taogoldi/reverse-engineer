@@ -9,6 +9,7 @@ Public reverse engineering write-ups and notes.
 
 Theme:
 - `jekyll-theme-chirpy` (Cotes2020)
+- Deployed via GitHub Pages Actions workflow: `.github/workflows/pages-deploy.yml`
 
 ## Source Files
 
