@@ -80,6 +80,9 @@ pre {
   inset: 0;
   z-index: -2;
   background: url("../images/ai-circuit-bg.svg") center / cover no-repeat;
+  transform: scale(1.03);
+  transform-origin: center;
+  animation: home-bg-drift 24s ease-in-out infinite alternate;
 }
 
 .layout--home .initial-content::after {
@@ -88,8 +91,16 @@ pre {
   inset: 0;
   z-index: -1;
   background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(158, 191, 255, 0.03) 0px,
+      rgba(158, 191, 255, 0.03) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
     radial-gradient(circle at 20% 20%, rgba(65, 105, 225, 0.14), transparent 42%),
-    linear-gradient(180deg, rgba(2, 6, 23, 0.18), rgba(2, 6, 23, 0.68));
+    linear-gradient(180deg, rgba(2, 6, 23, 0.08), rgba(2, 6, 23, 0.64));
+  animation: home-overlay-pulse 11s ease-in-out infinite;
   pointer-events: none;
 }
 
@@ -132,4 +143,27 @@ pre {
   border: 1px solid rgba(122, 162, 255, 0.22);
   border-radius: 10px;
   padding: 0.9rem 1rem;
+}
+
+@keyframes home-bg-drift {
+  0% {
+    transform: scale(1.03) translate3d(0, 0, 0);
+    filter: saturate(1) brightness(1);
+  }
+  100% {
+    transform: scale(1.07) translate3d(-1.1%, -0.7%, 0);
+    filter: saturate(1.08) brightness(1.04);
+  }
+}
+
+@keyframes home-overlay-pulse {
+  0% {
+    opacity: 0.78;
+  }
+  50% {
+    opacity: 0.92;
+  }
+  100% {
+    opacity: 0.8;
+  }
 }
