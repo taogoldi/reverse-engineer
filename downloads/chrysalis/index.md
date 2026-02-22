@@ -6,10 +6,14 @@ permalink: /downloads/chrysalis/
 
 Download bundle index for the Chrysalis write-up.
 
-- [scripts/]({{ "/downloads/chrysalis/scripts/" | relative_url }})
-- [ida/]({{ "/downloads/chrysalis/ida/" | relative_url }})
-- [notebooks/]({{ "/downloads/chrysalis/notebooks/" | relative_url }})
-- [input/]({{ "/downloads/chrysalis/input/" | relative_url }}) (hashes/manifest only)
-- [reports/binary_diff/]({{ "/downloads/chrysalis/reports/binary_diff/" | relative_url }})
-- [reports/db_diff_reports/]({{ "/downloads/chrysalis/reports/db_diff_reports/" | relative_url }})
-- [docs/]({{ "/downloads/chrysalis/docs/" | relative_url }})
+Primary public artifact repository:
+- [taogoldi/analysis_data](https://github.com/taogoldi/analysis_data/tree/main/chrysalis_feb_2026)
+
+Direct folders:
+- [scripts/](https://github.com/taogoldi/analysis_data/tree/main/chrysalis_feb_2026/scripts)
+- [ida/](https://github.com/taogoldi/analysis_data/tree/main/chrysalis_feb_2026/ida)
+- [notebooks/](https://github.com/taogoldi/analysis_data/tree/main/chrysalis_feb_2026/notebooks)
+- [input/](https://github.com/taogoldi/analysis_data/tree/main/chrysalis_feb_2026/input) (hashes/manifest only)
+- [reports/binary_diff/](https://github.com/taogoldi/analysis_data/tree/main/chrysalis_feb_2026/reports/binary_diff)
+- [reports/db_diff_reports/](https://github.com/taogoldi/analysis_data/tree/main/chrysalis_feb_2026/reports/db_diff_reports)
+- [docs/](https://github.com/taogoldi/analysis_data/tree/main/chrysalis_feb_2026/docs)
