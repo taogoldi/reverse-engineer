@@ -2,6 +2,10 @@
 
 This folder contains non-malware tooling and report artifacts referenced in the Chrysalis blog post.
 
+Primary public mirror:
+- `https://github.com/taogoldi/analysis_data/tree/main/chrysalis_feb_2026`
+
+Artifact groups:
 - `scripts/`: unpacking, emulation, rendering, and pipeline orchestration scripts
 - `ida/`: IDAPython automation scripts
 - `notebooks/`: analysis notebooks and supporting notebook data
