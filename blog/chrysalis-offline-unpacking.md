@@ -42,6 +42,7 @@ Everything referenced in this article is grouped so readers can either consume t
 - Scripts/emulators bundle: [Folder]({{ "/downloads/chrysalis/scripts/" | relative_url }})
 - IDA automation scripts: [Folder]({{ "/downloads/chrysalis/ida/" | relative_url }})
 - Notebooks bundle: [Folder]({{ "/downloads/chrysalis/notebooks/" | relative_url }})
+- Input sample hash manifest (no binaries): [Folder]({{ "/downloads/chrysalis/input/" | relative_url }})
 - DB diff CSV reports: [Folder]({{ "/downloads/chrysalis/reports/db_diff_reports/" | relative_url }})
 - Binary diff results: [Folder]({{ "/downloads/chrysalis/reports/binary_diff/" | relative_url }})
 - Pipeline flowchart assets: [Folder]({{ "/downloads/chrysalis/docs/" | relative_url }})
@@ -56,6 +57,7 @@ Everything referenced in this article is grouped so readers can either consume t
 - `patched_diff.txt`: [download]({{ "/downloads/chrysalis/reports/binary_diff/patched_diff.txt" | relative_url }})
 - `patched_diff.json`: [download]({{ "/downloads/chrysalis/reports/binary_diff/patched_diff.json" | relative_url }})
 - `chrysalis_unpacking_walkthrough.ipynb`: [download]({{ "/downloads/chrysalis/notebooks/chrysalis_unpacking_walkthrough.ipynb" | relative_url }})
+- `input_sha256.csv` (input verification manifest): [download]({{ "/downloads/chrysalis/input/input_sha256.csv" | relative_url }})
 
 ## File Hashes (Inputs and Produced Artifacts)
 
