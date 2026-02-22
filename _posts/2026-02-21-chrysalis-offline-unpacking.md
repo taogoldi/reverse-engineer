@@ -667,12 +667,14 @@ The map below compresses all modified file-offset ranges from `patched_diff.json
 
 <img src="{{ '/assets/images/patching/patch_range_map.svg' | absolute_url }}" alt="Patch range map from patched_diff.json" loading="lazy" style="max-width:100%;height:auto;" />
 
-<img src="{{ '/assets/images/asm/asm_H_patch_range_401000.png' | absolute_url }}" alt="Patched-range disassembly anchor around loc_401000" loading="lazy" style="max-width:100%;height:auto;" />
-*Disassembly anchor near `loc_401000`, included as a concrete low-level view complementary to the aggregate patch-range map.*
-
 ### Side-By-Side Diff Slices (Focused)
 
 These are compact slices extracted from `asm_side_by_side_*.csv` outputs (generated from the DB diff workflow). They are intentionally trimmed to representative instruction windows so readers can quickly compare baseline vs patched behavior.
+
+Target file: `main_module_patched.exe` | Patch-range entry anchor offset: `0x00401000` | Evidence image: `asm_H_patch_range_401000.png`
+
+<img src="{{ '/assets/images/asm/asm_H_patch_range_401000.png' | absolute_url }}" alt="Patched-range disassembly anchor around loc_401000" loading="lazy" style="max-width:100%;height:auto;" />
+*Disassembly anchor near `loc_401000`, used here as the first low-level entry point before the focused side-by-side slices.*
 
 Target file: `main_module_patched.exe` | Patched subroutine offset: `0x0043CD83` | Diff slice file: `asm_side_by_side_0x0043CD83.csv`
 Match status: **Unmatched at line level** (`same_line=True`: `0/2632` rows in `asm_side_by_side_0x0043CD83.csv`).
@@ -695,10 +697,25 @@ Match status: **Unmatched at line level** (`same_line=True`: `0/3599` rows in `a
 
 <img src="{{ '/assets/images/patching/patch_snippet_0048A890.svg' | absolute_url }}" alt="Side-by-side diff snippet 0x0048A890" loading="lazy" style="max-width:100%;height:auto;" />
 
+### Partial-Match Candidates (Function-Level)
+
+The diff dataset also contains function-level matches that are present in both binaries but modified. In the CSV outputs this is represented by `classification=patched` in `patched_functions.csv` (matched function identity, changed body).
+
+| Target file | Patched subroutine offset | Function name (patched) | Function-level status | Notes |
+|---|---|---|---|---|
+| `main_module_patched.exe` | `0x004863A0` | `sub_4863A0` | Partial match (`patched`) | Large body rewrite (`inst_count`: `9452 -> 1856`). |
+| `main_module_patched.exe` | `0x0048A890` | `sub_48A890` | Partial match (`patched`) | SEH-heavy function with substantial instruction delta (`3599 -> 742`). |
+| `main_module_patched.exe` | `0x0043CD83` | `sub_43CD83` | Partial match (`patched`) | Control-flow/handler block modified (`2632 -> 521`). |
+| `main_module_patched.exe` | `0x0048B6E0` | `sub_48B6E0` | Partial match (`patched`) | Size unchanged but body changed heavily (`2484 -> 526`). |
+
+Interpretation note:
+- Function-level `patched` can still appear line-level unmatched in focused slices when code has been heavily transformed or decompiler tokenization diverges.
+
 Full raw diff sources used for these visuals:
 - [`asm_side_by_side_0x0043CD83.csv`](https://raw.githubusercontent.com/taogoldi/analysis_data/main/chrysalis_feb_2026/reports/db_diff_reports/asm_side_by_side_0x0043CD83.csv)
 - [`asm_side_by_side_0x004863A0.csv`](https://raw.githubusercontent.com/taogoldi/analysis_data/main/chrysalis_feb_2026/reports/db_diff_reports/asm_side_by_side_0x004863A0.csv)
 - [`asm_side_by_side_0x0048A890.csv`](https://raw.githubusercontent.com/taogoldi/analysis_data/main/chrysalis_feb_2026/reports/db_diff_reports/asm_side_by_side_0x0048A890.csv)
+- [`patched_functions.csv`](https://raw.githubusercontent.com/taogoldi/analysis_data/main/chrysalis_feb_2026/reports/db_diff_reports/patched_functions.csv)
 - [`patched_diff.txt`](https://raw.githubusercontent.com/taogoldi/analysis_data/main/chrysalis_feb_2026/reports/binary_diff/patched_diff.txt)
 - [`patched_diff.json`](https://raw.githubusercontent.com/taogoldi/analysis_data/main/chrysalis_feb_2026/reports/binary_diff/patched_diff.json)
 
