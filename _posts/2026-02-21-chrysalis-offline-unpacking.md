@@ -690,10 +690,26 @@ Full raw diff sources used for these visuals:
 - [`patched_diff.txt`](https://raw.githubusercontent.com/taogoldi/analysis_data/main/chrysalis_feb_2026/reports/binary_diff/patched_diff.txt)
 - [`patched_diff.json`](https://raw.githubusercontent.com/taogoldi/analysis_data/main/chrysalis_feb_2026/reports/binary_diff/patched_diff.json)
 
-## Closing Notes
+## Conclusion
 
-The broader lesson is methodological: reliable malware analysis often comes from identifying the smallest dynamic slice needed to recover stable bytes, then doing the rest with explicit offline transforms and verification checkpoints. That tradeoff made this chain tractable on an ARM Mac without sacrificing analytical confidence.
+This project shows that the Chrysalis chain can be unpacked and validated in a reproducible way without fully executing malware in a live Windows debugger. The core strategy was to keep dynamic work narrow (only the stable loader handoff), then convert the rest of the chain into explicit offline transforms with verifiable outputs.
 
-The key idea is to split the problem into two parts:
-- Emulate only the loader layer that is stable and WinAPI-like (`log.dll`).
-- Treat everything after that as a byte recovery problem (documented transforms + deterministic decrypt), not “make every instruction execute correctly”.
+What this report establishes:
+- Input-sample identity was verified through SHA-256 hashes aligned with the Rapid7-described cluster.
+- Stage1 extraction at the `LogWrite` boundary was repeatable and produced stable byte-identical artifacts.
+- Offline region transforms recovered a workable decrypted main-module view for static reversing.
+- RC4 config recovery reproduced expected plaintext indicators, including the C2 URL path and UA context.
+- Binary and database diff artifacts provide an auditable change trail for peer review and handoff.
+
+What this workflow does not claim:
+- It does not emulate full runtime behavior of all post-handoff stages.
+- It does not replace controlled detonation for network/protocol behavior or timing-dependent actions.
+- It does not assume every future variant reuses identical offsets, seeds, or transform metadata.
+
+If you adapt this method to a new sample, keep the process in this order:
+1. Verify sample identity first (hashes and packaging context).
+2. Capture the cleanest possible handoff boundary artifact.
+3. Reconstruct later stages offline with explicit, testable transforms.
+4. Validate each stage with independent evidence (hashes, structural checks, diff reports).
+
+The practical outcome is a workflow that is safer to rerun, easier to audit, and easier to share with other analysts who need reliable artifacts rather than one-off debugger traces.
