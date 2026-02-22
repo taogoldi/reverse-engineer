@@ -1,10 +1,10 @@
 This write-up documents an end-to-end offline workflow for unpacking the Lotus Blossom “Chrysalis” chain described by Rapid7 (Feb 2026), without running the malware in a Windows debugger.
 
-The goal was to produce a workflow another analyst could rerun on a different machine and still land on the same bytes, the same hashes, and the same reversing pivots. Instead of relying on a fragile live-debugger session, this approach treats each stage as a measurable checkpoint and keeps the output evidence-centered.
+The goal was to produce a workflow another analyst could rerun on a different machine and still recover the same bytes, hashes, and reversing pivots. Instead of relying on a fragile live-debugger session, this approach treats each stage as a measurable checkpoint and keeps outputs evidence-centered.
 
 ## Summary and Attribution
 
-This project started as a practical engineering exercise: can we turn a good threat-intel write-up into a reproducible unpacking pipeline with auditable outputs? Rapid7 already established the family behavior and high-level chain, so the work here focused on implementation discipline, verification, and handoff quality for other reverse engineers.
+This project started as a practical engineering exercise: can we turn a strong threat-intel write-up into a reproducible unpacking pipeline with auditable outputs? Rapid7 already established the family behavior and high-level chain, so the work here focused on implementation discipline, verification, and handoff quality for other reverse engineers.
 
 Primary upstream research and malware-family analysis credit goes to Rapid7:
 - [The Chrysalis Backdoor: A Deep Dive into Lotus Blossom’s toolkit (Rapid7)](https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/)
@@ -40,7 +40,7 @@ If you only want the high-level story, read: `Execution Chain` -> `Why Emulation
 
 ## Downloads
 
-Everything referenced in this article is grouped so readers can either consume the write-up quickly or pull the exact scripts and reports needed to reproduce one section at a time. The intent is to make this usable as both a narrative report and a working analysis kit.
+Everything referenced in this article is grouped so readers can either consume the write-up quickly or pull the exact scripts and reports needed to reproduce one section at a time. The goal is to keep this useful as both a narrative report and a working analysis kit.
 
 ### Source and tooling bundles
 
@@ -736,7 +736,7 @@ What this workflow does not claim:
 - It does not replace controlled detonation for network/protocol behavior or timing-dependent actions.
 - It does not assume every future variant reuses identical offsets, seeds, or transform metadata.
 
-If you adapt this method to a new sample, keep the process in this order:
+If you adapt this method to a new sample, keep this order:
 1. Verify sample identity first (hashes and packaging context).
 2. Capture the cleanest possible handoff boundary artifact.
 3. Reconstruct later stages offline with explicit, testable transforms.
