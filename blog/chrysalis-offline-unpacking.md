@@ -172,8 +172,6 @@ The key takeaway: we didn’t “beat” VEH by perfectly emulating it; we **sid
 
 The toolkit is intentionally split into narrow scripts rather than one opaque monolith. That keeps each stage testable, makes failure modes easier to isolate, and lets analysts replace only the piece they need for a variant sample.
 
-> **Plain-English:** Think of this toolkit like a recipe where each script does one kitchen task: one script extracts data, one script decrypts data, one script compares changes, and one script renders reports. Small tools are easier to trust than one giant script that does everything at once.
-
 We built a small toolkit:
 - `emulate_logwrite_dump_shellcode.py`:
   - Unicorn x86 emulation for the `log.dll!LogWrite` path.
@@ -237,8 +235,6 @@ If these do not hold, stop and fix stage0 first (bad input file, wrong image bas
 ## Step 2: Offline Main-Module Decryption (“gQ2JR&9;”)
 
 Step 2 converts a dynamic reversing problem into a deterministic byte transform problem. Once we have stable stage1 outputs and argument metadata, we can reconstruct the next stage without depending on fragile runtime control flow.
-
-> **Plain-English:** Instead of trying to "run" difficult malware code, we apply the same math to the bytes ourselves. That is safer, easier to repeat, and much less likely to fail because of debugger quirks.
 
 Rapid7 provides the bytewise transform:
 
@@ -316,8 +312,6 @@ This is consistent with Rapid7’s statement that the module “executes the MSV
 
 Hash-resolved imports are one of the biggest readability blockers in loader analysis. This section explains why we modeled the loader hash path directly: replacing opaque immediates with likely API names accelerates every downstream review step.
 
-> **Plain-English:** The malware hides API names by storing short numeric codes (hashes) instead of readable names like `VirtualProtect`. A rainbow table is just a lookup sheet that turns those numbers back into likely names.
-
 Rapid7 describes `log.dll` as resolving APIs via a hashing subroutine instead of importing everything by name. At a high level, the loader:
 1. Enumerates exports of a target DLL (or a module it has already loaded).
 2. Hashes each export name with:
@@ -342,8 +336,6 @@ Main-module hashing is different:
 ## IDA Automation That Removed Manual Busywork
 
 Manual annotation works for one function, but it does not scale when the same patterns appear across hundreds of callsites. The IDA scripts were written to remove repetitive analyst effort and preserve consistent naming/comments across re-analysis sessions.
-
-> **Plain-English:** Without automation, analysts manually rename and comment the same patterns again and again. These scripts are "auto-labelers" that save time and make sure two analysts see the same names, not two different interpretations.
 
 Two practical IDA workflows were automated:
 
@@ -446,13 +438,11 @@ Explanation:
 Fix:
 - None required; this is expected. Validate via diff-bytes and PE structure instead.
 
-## Assembly Walkthrough (With Explicit Image Requests)
+## Assembly Walkthrough (Evidence Anchors)
 
 This section is intended for the final published write-up where readers want to see concrete assembly context, not only script output.
 
 The assembly snippets below are chosen as proof points: each one links a reversing claim to a concrete instruction pattern and a corresponding script action. If a reader can verify these anchors, they can trust the surrounding automation.
-
-> **Plain-English:** Assembly is the CPU's native instruction language. You do not need to read every line to follow the story here; focus on the highlighted boundaries (decrypt, memory-protect, jump) and how they connect to the scripts.
 
 ### A) `log.dll!LogWrite` Handoff Boundary
 
@@ -500,7 +490,6 @@ Why this matters:
 <img src="{{ '/assets/images/asm/asm_C_mw_decrypt_core.png' | absolute_url }}" alt="mw_decrypt core key schedule and rolling byte transform pseudocode" loading="lazy" style="max-width:100%;height:auto;" />
 *`mw_decrypt` core transform and key schedule logic used by the offline extractor implementation.*
 
-<!-- IMAGE_REQUEST: side-by-side screenshot: IDA assembly of mw_decrypt loop + corresponding Python loop in scripts/offline_extract_stage2.py. -->
 
 ### C) Stage1 Arg-Struct Region Mapping
 
@@ -516,7 +505,6 @@ Why this matters:
 - It explains why patched bytes are concentrated in specific ranges.
 - It connects assembly/runtime state to `patched_diff.json` output.
 
-<!-- IMAGE_REQUEST: screenshot of emulator/log output showing arg-struct values plus a second screenshot of output/patched_diff.txt ranges. -->
 
 ### D) RC4 Config Decryption Path Fingerprint
 
@@ -533,7 +521,6 @@ Why this matters:
 - It anchors the static analysis to observable constants (`0x980`, `0x30808`).
 - It demonstrates that config extraction was not guessed from strings alone.
 
-<!-- IMAGE_REQUEST: disassembler screenshot at the function referencing 0x980/0x30808, with cross-references visible. -->
 
 ### E) Loader API Hash Resolution Callsite
 
@@ -552,7 +539,6 @@ Why this matters:
 <img src="{{ '/assets/images/asm/asm_B_api_hash_resolver.png' | absolute_url }}" alt="mw_apihashing resolver pseudocode from log.dll" loading="lazy" style="max-width:100%;height:auto;" />
 *`mw_apihashing` resolver internals used to map 32-bit API hash constants to exported function names.*
 
-<!-- IMAGE_REQUEST: before/after screenshot from ida_chrysalis_api_hash_resolver.py showing raw hash constant vs resolved API annotation. -->
 
 ### F) Memory-Protection Transition Before Stage Handoff
 
@@ -599,7 +585,6 @@ Why this matters:
 - It demonstrates that config decryption is algorithmic and reproducible, not a guessed string extraction.
 - It gives readers a visual anchor for validating RC4 path discovery in IDA.
 
-<!-- IMAGE_REQUEST: screenshot of RC4 state-init/key-scheduling loop with 0x100 (256-byte) loop boundary visible. -->
 
 ### H) Command Tag Dispatch Pattern In Main Module
 
@@ -618,26 +603,23 @@ Why this matters:
 - It ties command-tag tables to concrete handler branches.
 - It helps less technical readers understand "this tag selects this behavior" at a glance.
 
-<!-- IMAGE_REQUEST: screenshot of one dispatcher function with at least 3 tag compares and branch targets visible. -->
 
 ## Flowchart (Pipeline Overview)
 
 The flowchart is useful for onboarding: it gives a one-screen model of where emulation stops, where offline transforms begin, and where reporting artifacts are generated. This is especially helpful when handing work to teammates who only need one stage.
 
-> **Plain-English:** This diagram is the "movie trailer" for the whole process. It shows inputs, major steps, and outputs so readers can understand the sequence before diving into technical details.
-
 The diagram below reflects the current pipeline order in `run_chrysalis_pipeline.py`, including the SQLite diff reports and static-SVG CFG HTML generation stages.
 
 ![Chrysalis Offline Unpacking Pipeline](https://raw.githubusercontent.com/taogoldi/analysis_data/main/chrysalis_feb_2026/docs/pipeline_flowchart.png)
 
-Source DOT file (versioned in repo):
-- `downloads/chrysalis/docs/pipeline_flowchart.dot`
+Source DOT file (versioned in the public artifact repository):
+- `https://github.com/taogoldi/analysis_data/blob/main/chrysalis_feb_2026/docs/pipeline_flowchart.dot`
 
 Render command (requires Graphviz `dot`):
 ```bash
-python3 downloads/chrysalis/scripts/render_flowchart.py \
-  --dot downloads/chrysalis/docs/pipeline_flowchart.dot \
-  --out downloads/chrysalis/docs/pipeline_flowchart.png
+python3 chrysalis_feb_2026/scripts/render_flowchart.py \
+  --dot chrysalis_feb_2026/docs/pipeline_flowchart.dot \
+  --out chrysalis_feb_2026/docs/pipeline_flowchart.png
 ```
 
 If `dot` is not installed on macOS, install Graphviz (e.g. via Homebrew) and re-run the command.
@@ -692,11 +674,11 @@ These are compact slices extracted from `asm_side_by_side_*.csv` outputs (genera
 <img src="{{ '/assets/images/patching/patch_snippet_0048A890.svg' | absolute_url }}" alt="Side-by-side diff snippet 0x0048A890" loading="lazy" style="max-width:100%;height:auto;" />
 
 Full raw diff sources used for these visuals:
-- `downloads/chrysalis/reports/db_diff_reports/asm_side_by_side_0x0043CD83.csv`
-- `downloads/chrysalis/reports/db_diff_reports/asm_side_by_side_0x004863A0.csv`
-- `downloads/chrysalis/reports/db_diff_reports/asm_side_by_side_0x0048A890.csv`
-- `downloads/chrysalis/reports/binary_diff/patched_diff.txt`
-- `downloads/chrysalis/reports/binary_diff/patched_diff.json`
+- [`asm_side_by_side_0x0043CD83.csv`](https://raw.githubusercontent.com/taogoldi/analysis_data/main/chrysalis_feb_2026/reports/db_diff_reports/asm_side_by_side_0x0043CD83.csv)
+- [`asm_side_by_side_0x004863A0.csv`](https://raw.githubusercontent.com/taogoldi/analysis_data/main/chrysalis_feb_2026/reports/db_diff_reports/asm_side_by_side_0x004863A0.csv)
+- [`asm_side_by_side_0x0048A890.csv`](https://raw.githubusercontent.com/taogoldi/analysis_data/main/chrysalis_feb_2026/reports/db_diff_reports/asm_side_by_side_0x0048A890.csv)
+- [`patched_diff.txt`](https://raw.githubusercontent.com/taogoldi/analysis_data/main/chrysalis_feb_2026/reports/binary_diff/patched_diff.txt)
+- [`patched_diff.json`](https://raw.githubusercontent.com/taogoldi/analysis_data/main/chrysalis_feb_2026/reports/binary_diff/patched_diff.json)
 
 ## Closing Notes
 
