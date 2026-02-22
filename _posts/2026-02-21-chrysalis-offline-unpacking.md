@@ -675,19 +675,23 @@ The map below compresses all modified file-offset ranges from `patched_diff.json
 These are compact slices extracted from `asm_side_by_side_*.csv` outputs (generated from the DB diff workflow). They are intentionally trimmed to representative instruction windows so readers can quickly compare baseline vs patched behavior.
 
 Target file: `main_module_patched.exe` | Patched subroutine offset: `0x0043CD83` | Diff slice file: `asm_side_by_side_0x0043CD83.csv`
+Match status: **Unmatched at line level** (`same_line=True`: `0/2632` rows in `asm_side_by_side_0x0043CD83.csv`).
 
 <img src="{{ '/assets/images/patching/patch_snippet_0043CD83.svg' | absolute_url }}" alt="Side-by-side diff snippet 0x0043CD83" loading="lazy" style="max-width:100%;height:auto;" />
 
 Target file: `main_module_patched.exe` | Patched subroutine offset: `0x0043CD83` | Evidence image: `asm_G_patch_43CD83.png`
+Match status: **Unmatched at line level** (`same_line=True`: `0/2632` rows in `asm_side_by_side_0x0043CD83.csv`).
 
 <img src="{{ '/assets/images/asm/asm_G_patch_43CD83.png' | absolute_url }}" alt="Direct disassembly view around 0x43CD83" loading="lazy" style="max-width:100%;height:auto;" />
 *Direct IDA disassembly around `0x43CD83`, aligned with the focused side-by-side genetics slice above.*
 
 Target file: `main_module_patched.exe` | Patched subroutine offset: `0x004863A0` | Diff slice file: `asm_side_by_side_0x004863A0.csv`
+Match status: **Unmatched at line level** (`same_line=True`: `0/9452` rows in `asm_side_by_side_0x004863A0.csv`).
 
 <img src="{{ '/assets/images/patching/patch_snippet_004863A0.svg' | absolute_url }}" alt="Side-by-side diff snippet 0x004863A0" loading="lazy" style="max-width:100%;height:auto;" />
 
 Target file: `main_module_patched.exe` | Patched subroutine offset: `0x0048A890` | Diff slice file: `asm_side_by_side_0x0048A890.csv`
+Match status: **Unmatched at line level** (`same_line=True`: `0/3599` rows in `asm_side_by_side_0x0048A890.csv`).
 
 <img src="{{ '/assets/images/patching/patch_snippet_0048A890.svg' | absolute_url }}" alt="Side-by-side diff snippet 0x0048A890" loading="lazy" style="max-width:100%;height:auto;" />
 
