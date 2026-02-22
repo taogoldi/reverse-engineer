@@ -32,6 +32,12 @@ If you are newer to malware analysis, these terms help decode the rest of this a
 
 If you only want the high-level story, read: `Execution Chain` -> `Why Emulation` -> `Step 1/2/3` -> `Conclusion`. The deeper IDA/assembly sections are there for specialist validation.
 
+> **Stage map (at a glance)**
+> Stage0: `BluetoothService.exe` sideloads `log.dll`; `LogWrite` performs loader-side shellcode decrypt + handoff.
+> Stage1: shellcode runs as a non-PE loader and applies the `"gQ2JR&9;"` region transform for main-module recovery.
+> Stage2: recovered main module is analyzed as patched PE / memory image artifacts.
+> Config: RC4 decrypt from `BluetoothService` blob using reported offset/size/key for this sample.
+
 ## Downloads
 
 Everything referenced in this article is grouped so readers can either consume the write-up quickly or pull the exact scripts and reports needed to reproduce one section at a time. The intent is to make this usable as both a narrative report and a working analysis kit.
@@ -112,9 +118,9 @@ This is the short operational story behind the unpacking work: sideloaded loader
 
 1. `BluetoothService.exe` loads `log.dll` via DLL sideloading and calls two exports:
    - `LogInit`: loads the encrypted blob into memory.
-   - `LogWrite`: resolves APIs via hashing, decrypts the blob, marks it executable, and jumps to it with a 25-dword argument structure.
+   - `LogWrite`: resolves APIs via hashing, performs loader-side runtime shellcode decryption (Rapid7 describes this as a custom path with LCG-related constants), marks memory executable, and jumps to shellcode with a 25-dword argument structure ([Rapid7](https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/)).
 2. The decrypted blob (stage1) is not a PE. It is a loader-like shellcode that:
-   - Decrypts the next module layer using a simple byte transform with key `"gQ2JR&9;"` over 5 regions.
+   - Decrypts the next module layer using the `"gQ2JR&9;"` add/xor/sub transform over 5 regions, as reported by Rapid7 ([Rapid7](https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/)).
    - Resolves APIs again and transfers execution to the “main module”.
 3. The main module behaves like a reflective PE-like implant (“Chrysalis”), performs CRT init, then executes its main logic.
 4. The implant decrypts configuration data stored in the `BluetoothService` blob using RC4.
@@ -178,10 +184,10 @@ We built a small toolkit:
   - Minimal API stubs (`HeapAlloc/Free/ReAlloc/Size`, `VirtualAlloc/Protect`, etc.).
   - Dumps stage1 bytes at the decryption breakpoint.
 - `offline_extract_stage2.py`:
-  - Applies Rapid7’s `"gQ2JR&9;"` per-byte transform over the 5 regions described by the stage1 argument struct.
+  - Applies Rapid7’s `"gQ2JR&9;"` per-byte transform over the 5 regions described by the stage1 argument struct ([Rapid7](https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/)).
   - Can output a patched PE on disk or a reconstructed memory image.
 - `decrypt_btservice_config.py`:
-  - RC4-decrypts the config at offset `0x30808` size `0x980` with key `qwhvb^435h&*7`.
+  - RC4-decrypts the config at offset `0x30808` size `0x980` with key `qwhvb^435h&*7` ([Rapid7](https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/)).
 - `api_hash_rainbow.py` (Windows):
   - Builds a rainbow table for the **loader/log.dll API hashing** described by Rapid7.
   - This is useful when reversing `log.dll` (and similar loader components) because it maps a 32-bit “API hash” back to a likely `(dll, export)` pair.
@@ -205,12 +211,12 @@ We built a small toolkit:
 
 Step 1 is where we establish controlled execution and collect the first high-value artifact. The objective is not full behavioral emulation; the objective is to stop at a known good point where decrypted stage1 bytes are observable and dumpable.
 
-We map `log.dll` at its expected image base (`0x10000000`) and set a breakpoint at:
-- `RVA 0x1C11` (VA `0x10001C11`)
+We map `log.dll` at its expected image base (`0x10000000`, sample-specific) and set a breakpoint at:
+- `RVA 0x1C11` (VA `0x10001C11`, sample-specific)
 
 At the breakpoint, `EAX` points to the decrypted stage1 buffer. We dump:
 - The “reported” stage1 length (201,096 bytes / `0x31188` in this sample)
-- The full 2MB region (`0x200000`) that the malware marks executable via `VirtualProtect`
+- The full 2MB region (`0x200000` in this sample, sample-specific) that the malware marks executable via `VirtualProtect`
 
 Outputs:
 - `shellcode.bin` (stage1)
@@ -227,8 +233,8 @@ This decision came from debugging pain: "minimal" dumps looked valid but later f
 At this point we want the following to be true:
 - Our `input/` hashes match Rapid7 (so we know we are working on the same sample family).
 - The emulator hits the breakpoint (`0x10001C11`) and prints `EAX=...` pointing into a mapped buffer.
-- `shellcode.bin` length is `0x31188` for the Rapid7 sample.
-- `shellcode_full.bin` length is `0x200000`.
+- For the sample matching Rapid7’s published hashes/indicators, the observed reported length at the breakpoint was `0x31188`.
+- In this sample, `shellcode_full.bin` length is `0x200000`.
 
 If these do not hold, stop and fix stage0 first (bad input file, wrong image base, missing stub, etc.).
 
@@ -236,7 +242,9 @@ If these do not hold, stop and fix stage0 first (bad input file, wrong image bas
 
 Step 2 converts a dynamic reversing problem into a deterministic byte transform problem. Once we have stable stage1 outputs and argument metadata, we can reconstruct the next stage without depending on fragile runtime control flow.
 
-Rapid7 provides the bytewise transform:
+Important stage boundary: this section covers the later stage1 region transform used for main-module recovery. It is distinct from the loader-side `log.dll!LogWrite` runtime shellcode decryption phase described above.
+
+Rapid7 provides the bytewise transform for this later phase ([Rapid7](https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/)):
 
 ```c
 BYTE k = XORKey[counter & 7];
@@ -247,16 +255,15 @@ x = x - k;
 decrypted[pos] = x;
 ```
 
-They also note the transform is applied 5 times, suggesting 5 PE-like regions.
+Rapid7 also notes this transform is applied 5 times ([Rapid7](https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/)). In this workflow, that maps to applying the routine across 5 region descriptors, not repeatedly reprocessing one contiguous byte range.
 
 Two key observations that make offline work reliable:
 1. The 25-dword argument structure passed to stage1 includes the region RVAs and sizes.
-2. The transform is an involution (apply it twice and you get the original byte back), which means:
-   - applying it 5 times is equivalent to applying it once.
+2. The transform is self-inverse per byte (apply it twice to the same byte with the same key context and you recover the original), which is why the same routine can serve encryption/decryption roles when region boundaries and ordering are preserved.
 
 In simple terms, this transform behaves like a reversible scramble. If the malware scrambles and unscrambles in a predictable way, we can reproduce that behavior offline and validate it with byte-level diffs.
 
-In our sample the region list is:
+In our sample (sample-specific), the region list is:
 - RVAs: `0x1000, 0x24000, 0x2D000, 0x30000, 0x31000`
 - Sizes: `0x23000, 0x8E00, 0xC00, 0x200, 0x1C00`
 - Total modified bytes: `0x2E800`
@@ -264,6 +271,8 @@ In our sample the region list is:
 We implement an offline decryptor that can:
 - Patch a PE on disk (`BluetoothService.exe`) in-place to produce a “decrypted” container (`main_module_patched.exe`)
 - Build a decrypted in-memory image (`main_module_mem.bin`)
+
+The patched PE is a reconstruction/analysis artifact for reversing and diffing, not a claim about the exact on-disk payload dropped during runtime.
 
 Producing both artifacts is intentional: file-backed tools and memory-oriented reversing tools answer different questions, and analysts usually need both views during triage.
 
@@ -280,14 +289,14 @@ Even though `main_module_patched.exe` remains the Bitdefender container, it is a
 
 For deeper reversing, the cleaner artifact is the reconstructed memory image (`main_module_mem.bin`), because it avoids file-offset vs RVA confusion when the malware expects an in-memory view.
 
-## Step 3: RC4 Config Decryption (Exact Match To Rapid7)
+## Step 3: RC4 Config Decryption (Matches Rapid7’s reported offset/size/key for this sample)
 
 Config extraction is sequenced after module recovery so the offset/size interpretation can be validated against the same staged context. Doing it in this order reduces the risk of treating copied indicators as independently discovered facts.
 
-Rapid7 describes the config location:
+Rapid7 describes the config location ([Rapid7](https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/)):
 - Stored in `BluetoothService` blob
-- Offset `0x30808`, size `0x980`
-- RC4 key `qwhvb^435h&*7`
+- Offset `0x30808`, size `0x980` (sample-specific / variant-dependent)
+- RC4 key `qwhvb^435h&*7` (sample-specific / variant-dependent)
 
 We decrypt it offline and confirm plaintext fields match:
 - `https://api.skycloudcenter.com/a/chat/s/{GUID}`
@@ -315,7 +324,7 @@ Hash-resolved imports are one of the biggest readability blockers in loader anal
 Rapid7 describes `log.dll` as resolving APIs via a hashing subroutine instead of importing everything by name. At a high level, the loader:
 1. Enumerates exports of a target DLL (or a module it has already loaded).
 2. Hashes each export name with:
-   - **FNV-1a** (seed `0x811C9DC5`, prime `0x01000193`)
+   - **FNV-1a** (seed `0x811C9DC5`, prime `0x01000193`; sample-specific constants here)
    - followed by a **MurmurHash-style avalanche finalizer**
 3. Applies a **salted comparison** against a hardcoded target hash.
 
@@ -343,8 +352,8 @@ Two practical IDA workflows were automated:
 - Input:
   - `log.dll` opened in IDA
   - Windows export directories (`C:\\Windows\\SysWOW64;C:\\Windows\\System32`)
-  - resolver EA (`0x100014E0` in this sample)
-  - seed (`0x114DDB33` in this sample)
+  - resolver EA (`0x100014E0` in this sample, sample-specific)
+  - seed (`0x114DDB33` in this sample, sample-specific)
 - Output:
   - Enum-applied immediate operands at resolver callsites
   - Comments such as:
@@ -366,7 +375,7 @@ Two practical IDA workflows were automated:
 - Input:
   - patched or memory module in IDA
 - Output:
-  - comments/highlights for constants and strings tied to config path (`0x980`, `0x30808`, and related xrefs)
+  - comments/highlights for constants and strings tied to config path (`0x980`, `0x30808`, and related xrefs; sample-specific / variant-dependent)
   - import-xref hits for config-path APIs (`CreateFileW`, `ReadFile`, `SetFilePointerEx`, etc.)
   - ranked candidate functions and optional CSV export
 - Notes:
@@ -444,6 +453,8 @@ This section is intended for the final published write-up where readers want to 
 
 The assembly snippets below are chosen as proof points: each one links a reversing claim to a concrete instruction pattern and a corresponding script action. If a reader can verify these anchors, they can trust the surrounding automation.
 
+All absolute addresses in this section are sample-specific unless otherwise noted.
+
 ### A) `log.dll!LogWrite` Handoff Boundary
 
 Representative pattern around the stage1 boundary:
@@ -467,7 +478,7 @@ Why this matters:
 <img src="{{ '/assets/images/asm/asm_A_logwrite_handoff.png' | absolute_url }}" alt="log.dll LogWrite handoff boundary with decrypt, VirtualProtect, and stage1 arg-struct setup" loading="lazy" style="max-width:100%;height:auto;" />
 *`log.dll!LogWrite` handoff boundary: decryption call, RWX transition, and stage1 argument-structure initialization before control transfer.*
 
-### B) `mw_decrypt` Byte-Transform Core
+### B) Stage1 Region Byte-Transform Core (`gQ2JR&9;`)
 
 Representative byte loop behavior (matching the offline script):
 
@@ -485,10 +496,10 @@ jb      short decrypt_loop
 
 Why this matters:
 - It ties the reversing claim directly to the implemented transform in `offline_extract_stage2.py`.
-- It explains why one correct pass over the 5 regions is sufficient in this sample workflow.
+- It reflects the later stage1-to-main-module transform phase, not the earlier `log.dll!LogWrite` runtime shellcode decrypt boundary.
 
 <img src="{{ '/assets/images/asm/asm_C_mw_decrypt_core.png' | absolute_url }}" alt="mw_decrypt core key schedule and rolling byte transform pseudocode" loading="lazy" style="max-width:100%;height:auto;" />
-*`mw_decrypt` core transform and key schedule logic used by the offline extractor implementation.*
+*Stage1 region-transform core and key schedule logic used by the offline extractor implementation.*
 
 
 ### C) Stage1 Arg-Struct Region Mapping
