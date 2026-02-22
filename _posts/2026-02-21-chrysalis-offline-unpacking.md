@@ -40,7 +40,7 @@ If you are newer to malware analysis, these terms help decode the rest of this a
 - **RVA/VA**: Addressing terms used in reversing. RVA is an offset inside a module; VA is the absolute runtime address.
 - **Diff report**: A comparison of “before vs after” bytes/code, used to prove exactly what changed.
 
-If you only want the high-level story, read: `Execution Chain` -> `Why Emulation` -> `Step 1/2/3` -> `Closing Notes`. The deeper IDA/assembly sections are there for specialist validation.
+If you only want the high-level story, read: `Execution Chain` -> `Why Emulation` -> `Step 1/2/3` -> `Conclusion`. The deeper IDA/assembly sections are there for specialist validation.
 
 ## Downloads
 
