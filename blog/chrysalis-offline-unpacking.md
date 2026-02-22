@@ -296,6 +296,9 @@ We decrypt it offline and confirm plaintext fields match:
 - module name `BluetoothService`
 - Chrome user-agent string
 
+<img src="{{ '/assets/images/asm/asm_I_rc4_config_decrypt_output.png' | absolute_url }}" alt="RC4 config decryption script and decrypted output evidence" loading="lazy" style="max-width:100%;height:auto;" />
+*RC4 decryption proof: KSA/PRGA routine, `0x30808`/`0x980` extraction, matching decrypted SHA-256, and plaintext config preview including C2 path/UA context.*
+
 ## Validating The “Main Module” Looks Real
 
 Validation here is about avoiding false positives. A blob can decrypt and still be structurally wrong; checking imports, entrypoint shape, and CRT-like startup behavior gives confidence that we recovered executable logic and not partial noise.

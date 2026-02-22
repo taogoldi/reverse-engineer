@@ -16,3 +16,5 @@ These images are currently wired into the Chrysalis post:
   Used in: `Genetics Matching` section near `0x43CD83`.
 - `asm_H_patch_range_401000.png`
   Used in: `Patch Range Genome Map` supplemental anchor image.
+- `asm_I_rc4_config_decrypt_output.png`
+  Used in: `Step 3: RC4 Config Decryption (Exact Match To Rapid7)` section.
