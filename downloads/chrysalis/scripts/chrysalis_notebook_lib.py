@@ -398,7 +398,9 @@ class ApiHashRainbow:
                     continue
                 file_off = base_raw + off
                 rva = base_rva + off
-                va = pe.OPTIONAL_HEADER.ImageBase + rva
+                if pe.OPTIONAL_HEADER is None:
+                    continue
+                va = pe.OPTIONAL_HEADER.ImageBase + rva #type: ignore
                 hits.append(
                     {
                         "file_off": file_off,
