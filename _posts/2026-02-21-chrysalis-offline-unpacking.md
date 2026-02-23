@@ -7,7 +7,7 @@ toc: true
 categories: [malware-reversing, threat-intel]
 tags: [chrysalis, lotus-blossom, unpacking, emulation, malware-analysis]
 image:
-  path: /assets/images/social/chrysalis-malware-ai-card.png
+  path: /assets/images/social/chrysalis-malware-ai-card.jpg
   alt: "Futuristic malware reverse-engineering visualization"
 ---
 
