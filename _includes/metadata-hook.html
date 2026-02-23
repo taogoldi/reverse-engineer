@@ -5,6 +5,7 @@
 
 {%- assign social_title = page.title | default: site.title -%}
 {%- assign social_desc = page.description | default: page.excerpt | default: site.description | strip_html | normalize_whitespace -%}
+{%- assign social_url = page.url | absolute_url -%}
 
 {%- assign social_img = nil -%}
 {%- if page.image -%}
@@ -16,6 +17,15 @@
 
 <meta name="twitter:title" content="{{ social_title | escape }}">
 <meta name="twitter:description" content="{{ social_desc | escape }}">
+<meta name="twitter:url" content="{{ social_url }}">
 {%- if social_img -%}
 <meta name="twitter:image" content="{{ social_img }}">
+<meta property="og:image:secure_url" content="{{ social_img }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+{%- if social_img contains '.jpg' or social_img contains '.jpeg' -%}
+<meta property="og:image:type" content="image/jpeg">
+{%- elsif social_img contains '.png' -%}
+<meta property="og:image:type" content="image/png">
+{%- endif -%}
 {%- endif -%}
