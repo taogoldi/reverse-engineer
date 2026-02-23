@@ -6,6 +6,9 @@ permalink: /blog/chrysalis-offline-unpacking/
 toc: true
 categories: [malware-reversing, threat-intel]
 tags: [chrysalis, lotus-blossom, unpacking, emulation, malware-analysis]
+image:
+  path: /assets/images/social/chrysalis-malware-ai-card.png
+  alt: "Futuristic malware reverse-engineering visualization"
 ---
 
 This write-up documents an end-to-end offline workflow for unpacking the Lotus Blossom “Chrysalis” chain described by Rapid7 (Feb 2026), without running the malware in a Windows debugger.
