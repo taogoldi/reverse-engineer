@@ -4,7 +4,7 @@
 platforms:
   - type: X
     icon: "fa-brands fa-square-x-twitter"
-    link: "https://twitter.com/intent/tweet?url=URL"
+    link: "https://twitter.com/intent/tweet?text=TITLE&url=URL"
 
   - type: LinkedIn
     icon: "fa-brands fa-linkedin"
