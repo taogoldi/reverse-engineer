@@ -1,0 +1,21 @@
+{%- comment -%}
+  Explicit social tags for better compatibility with X/Twitter card parsing.
+  Chirpy already injects SEO tags; this hook adds `name="twitter:*"` variants.
+{%- endcomment -%}
+
+{%- assign social_title = page.title | default: site.title -%}
+{%- assign social_desc = page.description | default: page.excerpt | default: site.description | strip_html | normalize_whitespace -%}
+
+{%- assign social_img = nil -%}
+{%- if page.image -%}
+  {%- assign src = page.image.path | default: page.image -%}
+  {%- capture social_img -%}{% include media-url.html src=src subpath=page.media_subpath absolute=true %}{%- endcapture -%}
+{%- elsif site.social_preview_image -%}
+  {%- capture social_img -%}{% include media-url.html src=site.social_preview_image absolute=true %}{%- endcapture -%}
+{%- endif -%}
+
+<meta name="twitter:title" content="{{ social_title | escape }}">
+<meta name="twitter:description" content="{{ social_desc | escape }}">
+{%- if social_img -%}
+<meta name="twitter:image" content="{{ social_img }}">
+{%- endif -%}
