@@ -8,6 +8,7 @@ tagline: Threat Intel and Reverse Engineering
 description: >-
   Public malware reversing write-ups, unpacking workflows, and reproducible analysis artifacts.
 avatar: "https://github.com/taogoldi.png"
+social_preview_image: /assets/images/social/chrysalis-malware-ai-card.png
 
 url: "https://taogoldi.github.io"
 baseurl: "/reverse-engineer"
