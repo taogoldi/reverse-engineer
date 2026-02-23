@@ -12,8 +12,6 @@ digraph pipeline {
     in_logdll   [label="input/log.dll\nsha256: 3bdc4c...b7ad", fillcolor="#FFF8E8"];
     in_btblob   [label="input/encrypted_shellcode.bin\n(\"BluetoothService\")\nsha256: 77bfea...3a2e", fillcolor="#FFF8E8"];
     in_container[label="input/BluetoothService.exe\n(Bitdefender container)\nsha256: 2da00d...6924", fillcolor="#FFF8E8"];
-    in_db_legit [label="databases/BluetoothService.exe.sqlite\n(primary / legit DB)", fillcolor="#FFF8E8"];
-    in_db_patched [label="databases/main_module_patched.exe.sqlite\n(secondary / patched DB)", fillcolor="#FFF8E8"];
   }
 
   subgraph cluster_stage0 {
@@ -55,24 +53,6 @@ digraph pipeline {
     h_hash [label="api_hash_rainbow.py (Windows)\nexport hash table generator", fillcolor="#F0F0FF"];
   }
 
-  subgraph cluster_dbdiff {
-    label="DB diff reports";
-    color="#888888";
-    style="rounded";
-    s3 [label="sqlite_diff_report.py\n--db-dir databases\n--out-dir notebooks/tables/db_diff_reports", fillcolor="#E8F4FF"];
-    out_db_patched [label="notebooks/tables/db_diff_reports/patched_functions.csv", fillcolor="#E8FFE8"];
-    out_db_summary [label="notebooks/tables/db_diff_reports/summary.csv\n(+ same/added/removed/patched preview CSVs)", fillcolor="#E8FFE8"];
-  }
-
-  subgraph cluster_cfg {
-    label="CFG HTML rendering";
-    color="#888888";
-    style="rounded";
-    s4 [label="render_cfg_diff_html.py\n(static SVG mode)\n--top N patched funcs", fillcolor="#E8F4FF"];
-    out_cfg_index [label="notebooks/visuals/cfg_html/index.html", fillcolor="#E8FFE8"];
-    out_cfg_reports [label="notebooks/visuals/cfg_html/cfg_diff_0xXXXXXXXX.html\n(one report per selected function)", fillcolor="#E8FFE8"];
-  }
-
   // edges
   in_logdll -> s0;
   in_btblob -> s0 [label="--payload"];
@@ -92,15 +72,5 @@ digraph pipeline {
   out_patched -> h_diff [label="--patched"];
   h_diff -> out_diff_txt;
   h_diff -> out_diff_json;
-
-  in_db_legit -> s3;
-  in_db_patched -> s3;
-  s3 -> out_db_patched;
-  s3 -> out_db_summary;
-
-  in_db_legit -> s4 [label="--primary-db"];
-  in_db_patched -> s4 [label="--secondary-db"];
-  out_db_patched -> s4 [label="--patched-csv"];
-  s4 -> out_cfg_index;
-  s4 -> out_cfg_reports;
 }
+
