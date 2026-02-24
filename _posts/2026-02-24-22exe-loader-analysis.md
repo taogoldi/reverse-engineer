@@ -166,6 +166,42 @@ Notable strings/import context observed:
 
 These are consistent with a credential/data collection stage, but by themselves they are not enough to claim final family certainty without decoding full config + command handling.
 
+## Stage2 Config Status
+
+Short answer: **partially decoded**.
+
+What is already decoded and verified:
+- Stage2 carrier blob decryption is deterministic for this sample.
+- AES key/IV/blob offsets from Stage1 are stable and reproducible.
+- Decrypted Stage2 output hash is stable across both extraction paths.
+
+What is not fully decoded yet:
+- a complete end-to-end parser for Stage2 config structures,
+- full command/dispatch schema reconstruction from decoded config buffers.
+
+### Config evidence from current run
+
+| Evidence artifact | What it proves |
+|---|---|
+| `reports/stage2_extract_report.json` | Stage1 constants decrypt to a valid PE (`MZ`) and produce stable Stage2 hashes. |
+| `reports/stage2_hex_input_decrypt_report.json` | Hex-input workflow reproduces the same decrypted Stage2 SHA-256. |
+| `reports/stage2_ioc_report.json` | Stage2 imports/strings align with data-collection behavior and config-related registry/user context gathering. |
+| `reports/stage2_config_extraction_plan.json` | Documented, repeatable next pivots for recovering config decode boundaries in Stage2. |
+
+### Config extraction path used in this project
+
+```bash
+python3 scripts/extract_stage2_from_22.py \
+  --sample input/22.exe \
+  --out artifacts
+
+python3 scripts/hunt_stage2_iocs.py \
+  --stage2 artifacts/stage2_dec_unpadded.bin \
+  --out reports
+```
+
+Plain-English: we already have a reliable way to unlock the second-stage file and triage likely config-related behavior. The remaining work is decoding the final internal config format, not recovering the encrypted carrier itself.
+
 ## Notebook and Script Guide
 
 ### Notebook
