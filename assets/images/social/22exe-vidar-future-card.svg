@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#05070f"/>
+      <stop offset="45%" stop-color="#0a1630"/>
+      <stop offset="100%" stop-color="#061021"/>
+    </linearGradient>
+    <radialGradient id="glow1" cx="25%" cy="20%" r="45%">
+      <stop offset="0%" stop-color="#4fd1ff" stop-opacity="0.38"/>
+      <stop offset="100%" stop-color="#4fd1ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="78%" cy="76%" r="42%">
+      <stop offset="0%" stop-color="#7b7cff" stop-opacity="0.34"/>
+      <stop offset="100%" stop-color="#7b7cff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="scan" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2dd4bf" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#2dd4bf" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#2dd4bf" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow1)"/>
+  <rect width="1200" height="630" fill="url(#glow2)"/>
+
+  <g opacity="0.22" stroke="#5dd3ff" stroke-width="1.2" fill="none">
+    <path d="M40 95 H280 L360 168 H510"/>
+    <path d="M280 95 V210 H415"/>
+    <path d="M520 170 H770 L840 250 H1110"/>
+    <path d="M90 500 H260 L350 420 H620"/>
+    <path d="M620 420 H760 L860 330 H1160"/>
+    <path d="M120 320 H300 L350 270 H560"/>
+    <path d="M560 270 H800 L910 200 H1170"/>
+  </g>
+
+  <g fill="#84e7ff" opacity="0.65">
+    <circle cx="280" cy="95" r="3.6"/>
+    <circle cx="360" cy="168" r="3.6"/>
+    <circle cx="770" cy="170" r="3.6"/>
+    <circle cx="840" cy="250" r="3.6"/>
+    <circle cx="260" cy="500" r="3.6"/>
+    <circle cx="350" cy="420" r="3.6"/>
+    <circle cx="860" cy="330" r="3.6"/>
+    <circle cx="910" cy="200" r="3.6"/>
+  </g>
+
+  <g opacity="0.2" fill="#8ba8ff" font-family="Menlo, Monaco, Consolas, monospace" font-size="20">
+    <text x="58" y="58">AMSI_PATCH()</text>
+    <text x="904" y="64">ETW::RET_STUB</text>
+    <text x="88" y="600">AES-256-CBC / STAGE2</text>
+    <text x="830" y="598">VIDAR-LIKE ANALYSIS</text>
+  </g>
+
+  <rect x="70" y="134" width="1060" height="360" rx="18" fill="#0a1226" fill-opacity="0.54" stroke="#2b4f7f" stroke-opacity="0.7"/>
+
+  <g fill="#d9e8ff" font-family="Arial, Helvetica, sans-serif">
+    <text x="110" y="220" font-size="58" font-weight="700">22.exe Loader Reversing</text>
+    <text x="110" y="278" font-size="33" fill="#9ebcff">Stage Decryption, Evasion, Attribution</text>
+    <text x="110" y="348" font-size="24" fill="#bdd5ff">AMSI bypass  |  ETW patching  |  AES stage decrypt  |  Stage2 triage</text>
+    <text x="110" y="414" font-size="22" fill="#8ec9ff">taogoldi.github.io/reverse-engineer</text>
+  </g>
+
+  <rect x="0" y="430" width="1200" height="12" fill="url(#scan)"/>
+</svg>
