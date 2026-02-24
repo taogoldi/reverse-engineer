@@ -243,11 +243,6 @@ Validation snapshot:
 ### Threat assessment
 Current working assessment is **Vidar-like** (medium confidence), based on staged decryption + in-memory security patching + stage2 collection-oriented indicators.
 
-### What still needs to be done
-1. Recover Stage2 config decode routine end-to-end.
-2. Map command/dispatch behavior from decoded structures.
-3. Compare decoded protocol/config layout against known Vidar lineage clusters.
-
 ## YARA Rules
 
 ### Rule 1: Stage1 high-fidelity
