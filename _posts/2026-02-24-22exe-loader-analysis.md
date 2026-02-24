@@ -49,6 +49,8 @@ flowchart TD
   F --> G[Stage2 Resolver / Config Logic]
 ```
 
+![22.exe stage workflow diagram](/assets/images/posts/22exe/22exe_stage_flowchart.svg)
+
 ## Sample Scope
 
 | Artifact | SHA-256 |
