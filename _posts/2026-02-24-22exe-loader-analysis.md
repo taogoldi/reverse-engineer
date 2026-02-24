@@ -7,7 +7,7 @@ toc: true
 categories: [malware-reversing, threat-intel]
 tags: [loader, amsi-bypass, etw-patch, aes, stage2, yara, attribution, vidar]
 image:
-  path: /assets/images/social/22exe-vidar-card.jpg
+  path: /assets/images/social/22exe-vidar-future-card.jpg
   alt: "22.exe loader reverse-engineering analysis"
 ---
 
@@ -51,10 +51,10 @@ flowchart TD
 
 ## Sample Scope
 
-- Stage1 sample: `22.exe`
-  - SHA-256: `0cb5a2e3c8aa7c80c8bbfb3a5f737c75807aa0e689dd4ad0a0466d113d8a6b9d`
-- Decrypted Stage2: `stage2_dec_unpadded.bin`
-  - SHA-256: `5fa52aa9046334c86da1e9746dfe9d7bb23ec69a8b2ab77d98efd2cb1af012f3`
+| Artifact | SHA-256 |
+|---|---|
+| `22.exe` (Stage1 sample) | `0cb5a2e3c8aa7c80c8bbfb3a5f737c75807aa0e689dd4ad0a0466d113d8a6b9d` |
+| `stage2_dec_unpadded.bin` (Decrypted Stage2) | `5fa52aa9046334c86da1e9746dfe9d7bb23ec69a8b2ab77d98efd2cb1af012f3` |
 
 ## Downloads
 
@@ -68,7 +68,11 @@ Public analysis bundle:
 
 YARA rules:
 - [YARA repository](https://github.com/taogoldi/YARA)
-- [VIDAR-like rule file](https://github.com/taogoldi/YARA/blob/main/stealers/vidar/vidar_like_22_rules.yar)
+- [VIDAR folder](https://github.com/taogoldi/YARA/tree/main/stealers/vidar)
+- [Stage1 high-fidelity](https://github.com/taogoldi/YARA/blob/main/stealers/vidar/vidar_like_22_stage1_highfidelity.yar)
+- [Stage2 high-fidelity](https://github.com/taogoldi/YARA/blob/main/stealers/vidar/vidar_like_22_stage2_highfidelity.yar)
+- [Stage1 variant heuristic](https://github.com/taogoldi/YARA/blob/main/stealers/vidar/vidar_like_22_stage1_variant_heuristic.yar)
+- [Stage2 variant heuristic](https://github.com/taogoldi/YARA/blob/main/stealers/vidar/vidar_like_22_stage2_variant_heuristic.yar)
 
 ## Stage1 Technical Findings
 
@@ -156,13 +160,6 @@ I am not calling this AES because of naming alone. The disassembly behavior matc
 
 Plain-English translation: the code is doing modern block-cipher style decrypt with a 32-byte key and IV, not a simple XOR/rolling key obfuscator.
 
-### Optional screenshot backlog (still useful)
-
-If you want to deepen the visuals further, these are the highest-value missing shots:
-- file `22.exe`, offset `0x140005120`, filename `hex_22exe_amsi_patch_bytes_0x140005120.png` (raw AMSI patch bytes)
-- file `22.exe`, function `sub_140004270`, filename `asm_22exe_etw_patch_primitive_0x140004270.png` (ETW memory-protect/write primitive)
-- file `stage2_dec_unpadded.bin`, offset `0x140062654`, filename `asm_stage2_config_candidate_0x140062654.png` (current config decode candidate)
-
 ## Stage2 Findings (Current State)
 
 Stage2 was recovered consistently through both script and notebook workflows.
@@ -237,7 +234,11 @@ Prepared ruleset:
 - `VIDAR_LIKE_22_STAGE2_HighFidelity`
 
 Public rule location:
-- `https://github.com/taogoldi/YARA/blob/main/stealers/vidar/vidar_like_22_rules.yar`
+- `https://github.com/taogoldi/YARA/tree/main/stealers/vidar`
+
+Rule set note:
+- this post includes the two strict high-fidelity rules used for the primary validation path.
+- the YARA repo also includes two broader heuristic rules for variant hunting.
 
 Validation snapshot:
 - stage1 rule matches `22.exe`
@@ -257,6 +258,8 @@ Current working assessment is **Vidar-like** (medium confidence), based on stage
 ## YARA Rules
 
 ### Rule 1: Stage1 high-fidelity
+
+<div markdown="1" style="border:1px solid #274060;border-radius:8px;padding:12px;margin:1rem 0;background:#0b1220;">
 
 ```yara
 rule VIDAR_LIKE_22_STAGE1_HighFidelity
@@ -334,7 +337,11 @@ rule VIDAR_LIKE_22_STAGE1_HighFidelity
 }
 ```
 
+</div>
+
 ### Rule 2: Stage2 high-fidelity
+
+<div markdown="1" style="border:1px solid #274060;border-radius:8px;padding:12px;margin:1rem 0;background:#0b1220;">
 
 ```yara
 rule VIDAR_LIKE_22_STAGE2_HighFidelity
@@ -362,3 +369,5 @@ rule VIDAR_LIKE_22_STAGE2_HighFidelity
     all of ($s*)
 }
 ```
+
+</div>
