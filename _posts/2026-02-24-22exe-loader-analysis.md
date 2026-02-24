@@ -7,11 +7,11 @@ toc: true
 categories: [malware-reversing, threat-intel]
 tags: [loader, amsi-bypass, etw-patch, aes, stage2, yara, attribution, vidar]
 image:
-  path: /assets/images/social/22exe-vidar-future-card.jpg
+  path: /assets/images/social/22exe-vidar-future-clean.jpg
   alt: "22.exe loader reverse-engineering analysis"
 ---
 
-**Sample acquisition source (defanged):** `hXXps://cloudaxis[.]cc/gsmft/yueu/fkvqld/tvqqwh/ushu/22.exe`
+**Sample acquisition source:** `hXXps://cloudaxis[.]cc/gsmft/yueu/fkvqld/tvqqwh/ushu/22.exe`
 
 I built this write-up as a reproducible analyst notebook-to-blog handoff for `22.exe`: what it does, how we extracted the next stage safely, where the anti-analysis logic lives, and what we can and cannot claim yet.
 
@@ -28,7 +28,7 @@ Attribution status:
 - current evidence is most consistent with a **Vidar-like** tradecraft profile,
 - confidence is **medium** until Stage2 config and command handling are fully decoded.
 
-## Quick Primer (For Less Technical Readers)
+## Quick Primer
 
 - `AMSI` is a Windows scanning interface used by security products to inspect scripts/content before execution.
 - `ETW` is a Windows telemetry pipeline used to log behavior (process/runtime events).
@@ -39,7 +39,7 @@ Plain-English translation: this loader appears to reduce security visibility fir
 
 ## Stage Flow
 
-![22.exe stage workflow diagram](/assets/images/posts/22exe/22exe_stage_flowchart.svg)
+![22.exe stage workflow diagram](/assets/images/posts/22exe/22exe_stage_flowchart_clean.png)
 
 ## Sample Scope
 
@@ -121,7 +121,7 @@ Observed markers include:
 
 This is not one single "if sandbox then quit" check. It looks more like a collection of environment checks that feed gating decisions.
 
-## Stage2 Decryption and Why I Call It AES
+## Stage2 Decryption
 
 ### Offsets used in this sample (sample-specific)
 
