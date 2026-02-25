@@ -7,7 +7,7 @@ toc: true
 categories: [malware-reversing, threat-intel]
 tags: [loader, amsi-bypass, etw-patch, aes, stage2, yara, attribution, vidar]
 image:
-  path: /assets/images/social/22exe-vidar-future-clean.jpg
+  path: /assets/images/social/22exe-vidar-future-clean-v2.jpg
   alt: "Stage1 22.exe loader reverse-engineering analysis"
 ---
 
