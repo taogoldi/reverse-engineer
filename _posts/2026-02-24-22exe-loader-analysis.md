@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "22.exe Loader Reversing: Stage Decryption, Evasion, and Attribution"
+title: "Stage1 (22.exe) Loader Reversing: Stage Decryption, Evasion, and Attribution"
 permalink: /blog/22exe-loader-analysis/
 date: 2026-02-24 00:00:00 +0000
 toc: true
@@ -8,12 +8,12 @@ categories: [malware-reversing, threat-intel]
 tags: [loader, amsi-bypass, etw-patch, aes, stage2, yara, attribution, vidar]
 image:
   path: /assets/images/social/22exe-vidar-future-clean.jpg
-  alt: "22.exe loader reverse-engineering analysis"
+  alt: "Stage1 22.exe loader reverse-engineering analysis"
 ---
 
 **Sample acquisition source:** `hXXps://cloudaxis[.]cc/gsmft/yueu/fkvqld/tvqqwh/ushu/22.exe`
 
-I built this write-up as a reproducible analyst notebook-to-blog handoff for `22.exe`: what it does, how we extracted the next stage safely, where the anti-analysis logic lives, and what we can and cannot claim yet.
+I built this write-up as a reproducible analyst notebook-to-blog handoff for `22.exe` (treated as **Stage1** in this analysis): what it does, how we extracted the next stage safely, where the anti-analysis logic lives, and what we can and cannot claim yet.
 
 ## Summary
 
@@ -25,7 +25,7 @@ What is confirmed in this sample set:
 - and working YARA coverage for stage1 and stage2 artifacts.
 
 Attribution status:
-- current evidence is most consistent with a **Vidar-like** tradecraft profile,
+- Stage2 is classified as Vidar by multiple commercial AV detections in sandbox telemetry, so this write-up refers to it as a **VIDAR variant** for now,
 - confidence is **medium** until Stage2 config and command handling are fully decoded.
 
 ## Quick Primer
@@ -166,41 +166,9 @@ Notable strings/import context observed:
 
 These are consistent with a credential/data collection stage, but by themselves they are not enough to claim final family certainty without decoding full config + command handling.
 
-## Stage2 Config Status
-
-Short answer: **partially decoded**.
-
-What is already decoded and verified:
-- Stage2 carrier blob decryption is deterministic for this sample.
-- AES key/IV/blob offsets from Stage1 are stable and reproducible.
-- Decrypted Stage2 output hash is stable across both extraction paths.
-
-What is not fully decoded yet:
-- a complete end-to-end parser for Stage2 config structures,
-- full command/dispatch schema reconstruction from decoded config buffers.
-
-### Config evidence from current run
-
-| Evidence artifact | What it proves |
-|---|---|
-| `reports/stage2_extract_report.json` | Stage1 constants decrypt to a valid PE (`MZ`) and produce stable Stage2 hashes. |
-| `reports/stage2_hex_input_decrypt_report.json` | Hex-input workflow reproduces the same decrypted Stage2 SHA-256. |
-| `reports/stage2_ioc_report.json` | Stage2 imports/strings align with data-collection behavior and config-related registry/user context gathering. |
-| `reports/stage2_config_extraction_plan.json` | Documented, repeatable next pivots for recovering config decode boundaries in Stage2. |
-
-### Config extraction path used in this project
-
-```bash
-python3 scripts/extract_stage2_from_22.py \
-  --sample input/22.exe \
-  --out artifacts
-
-python3 scripts/hunt_stage2_iocs.py \
-  --stage2 artifacts/stage2_dec_unpadded.bin \
-  --out reports
-```
-
-Plain-English: we already have a reliable way to unlock the second-stage file and triage likely config-related behavior. The remaining work is decoding the final internal config format, not recovering the encrypted carrier itself.
+External telemetry pivot:
+- a sandbox-derived Suricata alert links this cluster to an SSLBL certificate fingerprint associated with Vidar C2 activity: `c8:28:9f:1d:bf:34:11:94:43:a3:07:7f:d8:79:c3:43:35:06:f3:58` ([SSLBL entry](https://sslbl.abuse.ch/ssl-certificates/sha1/c8289f1dbf34119443a3077fd879c3433506f358/)).
+- that fingerprint is useful for network-side hunting (TLS cert pivoting), but it is **not** present as a direct static literal inside this decrypted Stage2 blob.
 
 ## Notebook and Script Guide
 
@@ -237,7 +205,7 @@ Why this matters: it gives you one repeatable path from raw sample to evidence a
 
 ### `ida_python/sv_stage_decrypt_annotator.py`
 
-What it attempts to do on `22.exe`:
+What it attempts to do on Stage1 (`22.exe`):
 - rename core stage/decrypt/evasion functions,
 - rename key globals (encrypted blob, key, IV, patch byte buffers),
 - apply comments/types/frame var names,
@@ -277,7 +245,7 @@ Validation snapshot:
 ## Attribution Status
 
 ### Threat assessment
-Current working assessment is **Vidar-like** (medium confidence), based on staged decryption + in-memory security patching + stage2 collection-oriented indicators.
+Current working assessment is **VIDAR variant** (medium confidence), based on multi-vendor Stage2 classification plus staged decryption, in-memory security patching, and Stage2 collection-oriented indicators.
 
 ## YARA Rules
 
