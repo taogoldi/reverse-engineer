@@ -176,10 +176,6 @@ Notable strings/import context observed:
 
 These are consistent with a credential/data collection stage. In the current static Stage2 artifact, I still do not observe cleartext C2 URLs/domains/IPs, which suggests network/config material is likely decoded at runtime or stored in a transformed form.
 
-External telemetry pivot:
-- a sandbox-derived Suricata alert links this cluster to an SSLBL certificate fingerprint associated with Vidar C2 activity: `c8:28:9f:1d:bf:34:11:94:43:a3:07:7f:d8:79:c3:43:35:06:f3:58` ([SSLBL entry](https://sslbl.abuse.ch/ssl-certificates/sha1/c8289f1dbf34119443a3077fd879c3433506f358/)).
-- that fingerprint is useful for network-side hunting (TLS cert pivoting), but it is **not** present as a direct static literal inside this decrypted Stage2 blob.
-
 Reference links used for this check:
 - [Neo23x0/signature-base: `gen_xor_hunting.yar`](https://github.com/Neo23x0/signature-base/blob/master/yara/gen_xor_hunting.yar)
 - [CyberChef XOR brute-force recipe](https://gchq.github.io/CyberChef/#recipe=XOR_Brute_Force())
@@ -266,7 +262,7 @@ Validation snapshot:
 ## Attribution Status
 
 ### Threat assessment
-Current working assessment is **Vidar-like** with **medium confidence**. The strongest signals are multi-vendor Stage2 classification, collection-oriented Stage2 strings/imports, and the TLS certificate pivot (`c8:28:9f:1d:bf:34:11:94:43:a3:07:7f:d8:79:c3:43:35:06:f3:58`) tied to Vidar C2 reporting. Confidence stays medium because we still need a fully decoded Stage2 config and verified end-to-end C2 behavior.
+Current working assessment is **Vidar-like** with **medium confidence**. Multiple commercial AV vendors identify this Stage2 variant as associated with Vidar, and the collection-oriented Stage2 strings/imports are consistent with that direction. Confidence stays medium because we still need a fully decoded Stage2 config and verified end-to-end C2 behavior.
 
 ## YARA Rules
 
