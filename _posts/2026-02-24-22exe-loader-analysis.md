@@ -397,6 +397,7 @@ rule VIDAR_LIKE_22_STAGE1_Variant_Heuristic
     description = "Variant-oriented stage1 heuristic for this cluster (less strict than high-fidelity)"
     version = 1
     sha256 = "0cb5a2e3c8aa7c80c8bbfb3a5f737c75807aa0e689dd4ad0a0466d113d8a6b9d"
+    sample_sha256 = "0cb5a2e3c8aa7c80c8bbfb3a5f737c75807aa0e689dd4ad0a0466d113d8a6b9d"
     confidence = "medium"
 
   strings:
@@ -465,6 +466,7 @@ rule VIDAR_LIKE_22_STAGE2_Variant_Heuristic
     description = "Variant-oriented stage2 heuristic from this cluster"
     version = 1
     sha256 = "5fa52aa9046334c86da1e9746dfe9d7bb23ec69a8b2ab77d98efd2cb1af012f3"
+    stage2_sha256 = "5fa52aa9046334c86da1e9746dfe9d7bb23ec69a8b2ab77d98efd2cb1af012f3"
     confidence = "medium"
 
   strings:
