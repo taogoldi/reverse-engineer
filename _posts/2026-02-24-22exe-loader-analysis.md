@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Stage1 (22.exe) Loader Reversing: Stage Decryption, Evasion, and Attribution"
+title: "Stage1 (22.exe) Loader Reversing, Part I: Stage Decryption, Evasion, and Attribution"
 permalink: /blog/22exe-loader-analysis/
 date: 2026-02-24 00:00:00 +0000
 toc: true
@@ -453,3 +453,7 @@ rule VIDAR_LIKE_22_STAGE2_Variant_Heuristic
     2 of ($s*)
 }
 ```
+
+## Part II
+
+Part II will focus on the Stage2 analysis breakdown: config decode workflow, command/dispatcher mapping, and validated network behavior.
