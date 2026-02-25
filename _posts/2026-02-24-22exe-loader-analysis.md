@@ -13,7 +13,7 @@ image:
 
 **Sample acquisition source:** `hXXps://cloudaxis[.]cc/gsmft/yueu/fkvqld/tvqqwh/ushu/22.exe`
 
-I built this write-up as a reproducible analyst notebook-to-blog handoff for `22.exe` (treated as **Stage1** in this analysis): what it does, how we extracted the next stage safely, where the anti-analysis logic lives, and what we can and cannot claim yet.
+In this post, I break down what `22.exe` (treated as **Stage1** here) is doing, how I safely extracted Stage2, where the anti-analysis logic shows up, and where attribution still doesn't have enough proof yet.
 
 ## Summary
 
@@ -25,8 +25,9 @@ What is confirmed in this sample set:
 - and working YARA coverage for stage1 and stage2 artifacts.
 
 Attribution status:
-- Stage2 is classified as Vidar by multiple commercial AV detections in sandbox telemetry, so this write-up refers to it as a **VIDAR variant** for now,
-- confidence is **medium** until Stage2 config and command handling are fully decoded.
+- Observed: Stage2 is classified as Vidar by multiple commercial AV detections in sandbox telemetry.
+- Inferred: Based on that plus the behavior in this write-up, I refer to the chain as **Vidar-like** for now.
+- Confidence is **medium** until Stage2 config and command handling are fully decoded.
 
 ## Quick Primer
 
@@ -35,7 +36,7 @@ Attribution status:
 - A `patch` here means overwriting a few bytes in memory so a security-related function returns immediately.
 - `Reflective loading` means loading a PE from memory directly instead of writing a normal file to disk and launching it.
 
-Plain-English translation: this loader appears to reduce security visibility first, then unpack and run the next stage in memory.
+In plain English: this loader appears to reduce security visibility first, then unpack and run the next stage in memory.
 
 ## Stage Flow
 
@@ -43,8 +44,10 @@ Plain-English translation: this loader appears to reduce security visibility fir
 
 ## Sample Scope
 
+### Artifacts (SHA-256)
+
 | Artifact | SHA-256 |
-|---|---|
+| --- | --- |
 | `22.exe` (Stage1 sample) | `0cb5a2e3c8aa7c80c8bbfb3a5f737c75807aa0e689dd4ad0a0466d113d8a6b9d` |
 | `stage2_dec_unpadded.bin` (Decrypted Stage2) | `5fa52aa9046334c86da1e9746dfe9d7bb23ec69a8b2ab77d98efd2cb1af012f3` |
 
@@ -77,6 +80,8 @@ The loader uses dedicated routines to patch telemetry/scanning APIs in memory:
 - ETW patch bytes (primary): `31 C0 C3` (`xor eax, eax ; ret`)
 - ETW patch bytes (fallback): `C2 14 00` (`ret 0x14`)
 
+Note: `C2 14 00` (`ret 0x14`) is an x86-style stdcall stack-cleanup pattern. In this x64 sample, it appears as a fallback patch buffer and may not be exercised on the primary path.
+
 Relevant functions:
 - `sub_140002EA0` for AMSI target selection (`AmsiScanBuffer`, fallback `AmsiOpenSession`)
 - `sub_140002F00` for ETW target selection (`EtwEventWrite`, `EtwEventWriteTransfer`, `NtTraceEvent`)
@@ -106,10 +111,10 @@ Finally, the data view shows the exact patch byte payloads used by the ETW routi
 
 ![ETW patch bytes at 0x1400A3570 and 0x1400A3580](/assets/images/posts/22exe/hex_22exe_etw_patch_bytes_0x1400A3570_0x1400A3580.png)
 
-Why this matters operationally:
-- **Why AMSI bypass is used:** AMSI is often where decoded script/content gets inspected before execution. Short-circuiting these calls reduces that inspection window.
-- **Why ETW patching is used:** ETW is heavily used by EDR/telemetry pipelines. Returning early from ETW writers reduces behavioral event visibility during the critical unpack/execute period.
-- **Why both together:** one weakens in-line content scanning and the other weakens runtime logging. Used together, they increase the chance that the next stage runs with less detection pressure.
+Operationally:
+- **AMSI:** it is often where decoded script/content gets inspected before execution. Short-circuiting these calls reduces that inspection window.
+- **ETW:** it is heavily used by EDR/telemetry pipelines. Returning early from ETW writers reduces behavioral event visibility during the critical unpack/execute period.
+- **Together:** one weakens in-line content scanning and the other weakens runtime logging, which increases the chance that the next stage runs with less detection pressure.
 
 ### Anti-Analysis / Anti-Sandbox Logic
 
@@ -118,7 +123,7 @@ Observed markers include:
 - `cuckoomon.dll`
 - `SbieDll.dll`
 - `SOFTWARE\Wine`
-- Sandboxie uninstall key path
+- `SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Sandboxie`
 - user/host/process markers such as `joe sandbox`, `SANDBOX`, `maltest`, `ProcessHacker.exe`, `injector.exe`
 
 This is not one single "if sandbox then quit" check. It looks more like a collection of environment checks that feed gating decisions.
@@ -152,7 +157,7 @@ I am not calling this AES because of naming alone. The disassembly behavior matc
 
 ![AES-CBC decrypt core callsite at 0x140002820 path](/assets/images/posts/22exe/asm_22exe_aes_cbc_core_0x140002820.png)
 
-Plain-English translation: the code is doing modern block-cipher style decrypt with a 32-byte key and IV, not a simple XOR/rolling key obfuscator.
+Bottom line: the code is doing modern block-cipher style decrypt with a 32-byte key and IV, not a simple XOR/rolling key obfuscator.
 
 ## Stage2 Findings (Current State)
 
@@ -185,6 +190,7 @@ Reference links used for this check:
 ### Notebook
 
 - `notebooks/spectralviper_deobfuscation_walkthrough.ipynb`
+- The `spectralviper` label in these filenames is an internal working name for this dataset/cluster, not a finalized malware-family attribution.
 - What it does:
   - lays out the stage flow and constants,
   - extracts and decrypts Stage2,
@@ -260,15 +266,15 @@ Validation snapshot:
 ## Attribution Status
 
 ### Threat assessment
-Current working assessment is **VIDAR variant** (medium confidence), based on multi-vendor Stage2 classification plus staged decryption, in-memory security patching, and Stage2 collection-oriented indicators.
+Current working assessment is **Vidar-like** with **medium confidence**. The strongest signals are multi-vendor Stage2 classification, collection-oriented Stage2 strings/imports, and the TLS certificate pivot (`c8:28:9f:1d:bf:34:11:94:43:a3:07:7f:d8:79:c3:43:35:06:f3:58`) tied to Vidar C2 reporting. Confidence stays medium because we still need a fully decoded Stage2 config and verified end-to-end C2 behavior.
 
 ## YARA Rules
 
-### Rule 1: Stage1 high-fidelity
-
-<div markdown="1" style="border:1px solid #274060;border-radius:8px;padding:12px;margin:1rem 0;background:#0b1220;">
+Copy/paste-ready rules (single file):
 
 ```yara
+import "pe"
+
 rule VIDAR_LIKE_22_STAGE1_HighFidelity
 {
   meta:
@@ -342,15 +348,7 @@ rule VIDAR_LIKE_22_STAGE1_HighFidelity
     $patch_amsi and $patch_etw1 and $patch_etw2 and
     $sig_orchestrator and $sig_stage_decrypt_wrapper and $sig_reflective_handoff
 }
-```
 
-</div>
-
-### Rule 2: Stage2 high-fidelity
-
-<div markdown="1" style="border:1px solid #274060;border-radius:8px;padding:12px;margin:1rem 0;background:#0b1220;">
-
-```yara
 rule VIDAR_LIKE_22_STAGE2_HighFidelity
 {
   meta:
@@ -376,17 +374,6 @@ rule VIDAR_LIKE_22_STAGE2_HighFidelity
     pe.imports("USER32.dll", "EnumDisplayDevicesA") and
     all of ($s*)
 }
-```
-
-</div>
-
-
-### Rule 3: Stage1 variant heuristic
-
-<div markdown="1" style="border:1px solid #274060;border-radius:8px;padding:12px;margin:1rem 0;background:#0b1220;">
-
-```yara
-import "pe"
 
 rule VIDAR_LIKE_22_STAGE1_Variant_Heuristic
 {
@@ -445,16 +432,6 @@ rule VIDAR_LIKE_22_STAGE1_Variant_Heuristic
     ($sig_kexp or $sig_stage_decrypt_wrapper) and
     ($patch_amsi or $patch_etw1)
 }
-```
-
-</div>
-
-### Rule 4: Stage2 variant heuristic
-
-<div markdown="1" style="border:1px solid #274060;border-radius:8px;padding:12px;margin:1rem 0;background:#0b1220;">
-
-```yara
-import "pe"
 
 rule VIDAR_LIKE_22_STAGE2_Variant_Heuristic
 {
@@ -480,5 +457,3 @@ rule VIDAR_LIKE_22_STAGE2_Variant_Heuristic
     2 of ($s*)
 }
 ```
-
-</div>
