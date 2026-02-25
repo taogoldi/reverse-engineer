@@ -56,6 +56,8 @@ Public analysis bundle:
 - [notebooks (output-cleared)](https://github.com/taogoldi/analysis_data/tree/main/vidar_feb_2026/notebooks)
 - [IDA helpers](https://github.com/taogoldi/analysis_data/tree/main/vidar_feb_2026/ida)
 - [reports and evidence artifacts](https://github.com/taogoldi/analysis_data/tree/main/vidar_feb_2026/reports)
+- [XOR Mozilla reproduction report](https://github.com/taogoldi/analysis_data/blob/main/vidar_feb_2026/reports/stage2_xor_mozilla_report.json)
+- [Upstream rule match evidence (gen_xor_hunting.yar)](https://github.com/taogoldi/analysis_data/blob/main/vidar_feb_2026/reports/stage2_gen_xor_hunting_yara_match.txt)
 - [workflow flowchart files](https://github.com/taogoldi/analysis_data/tree/main/vidar_feb_2026/docs)
 
 YARA rules:
@@ -161,14 +163,22 @@ Notable strings/import context observed:
 - `\\Network\\Cookies`
 - long `%DOWNLOADS%` token-like string
 - imports such as `CreateDesktopA`, `OpenDesktopA`, `EnumDisplayDevicesA`, `GetCurrentHwProfileA`
+- single-byte XOR recoverable `Mozilla/5.0` markers at offsets `0x410` (key `0x33`), `0x22F1` (key `0xD5`), `0x2331` (key `0x63`)
+- this behavior reproduces the community THOR/signature-base heuristic `SUSP_XORed_Mozilla_Oct19` from `gen_xor_hunting.yar`
+- running upstream `gen_xor_hunting.yar` directly against this decrypted Stage2 also returns `SUSP_XORed_Mozilla_Oct19`
 
 ![Stage2 strings with collection-oriented indicators](/assets/images/posts/22exe/strings_stage2_vidar_like_indicators.png)
 
-These are consistent with a credential/data collection stage, but by themselves they are not enough to claim final family certainty without decoding full config + command handling.
+These are consistent with a credential/data collection stage. In the current static Stage2 artifact, I still do not observe cleartext C2 URLs/domains/IPs, which suggests network/config material is likely decoded at runtime or stored in a transformed form.
 
 External telemetry pivot:
 - a sandbox-derived Suricata alert links this cluster to an SSLBL certificate fingerprint associated with Vidar C2 activity: `c8:28:9f:1d:bf:34:11:94:43:a3:07:7f:d8:79:c3:43:35:06:f3:58` ([SSLBL entry](https://sslbl.abuse.ch/ssl-certificates/sha1/c8289f1dbf34119443a3077fd879c3433506f358/)).
 - that fingerprint is useful for network-side hunting (TLS cert pivoting), but it is **not** present as a direct static literal inside this decrypted Stage2 blob.
+
+Reference links used for this check:
+- [Neo23x0/signature-base: `gen_xor_hunting.yar`](https://github.com/Neo23x0/signature-base/blob/master/yara/gen_xor_hunting.yar)
+- [CyberChef XOR brute-force recipe](https://gchq.github.io/CyberChef/#recipe=XOR_Brute_Force())
+- [Nextron notes on VirusTotal matches](https://www.nextron-systems.com/notes-on-virustotal-matches/)
 
 ## Notebook and Script Guide
 
@@ -179,8 +189,9 @@ External telemetry pivot:
   - lays out the stage flow and constants,
   - extracts and decrypts Stage2,
   - supports decrypt-from-hex for extracted stage/key material,
+  - reproduces XORed `Mozilla/5.0` hunting on Stage2,
   - surfaces AMSI/ETW patch evidence,
-  - pulls anti-sandbox indicators and Stage2 triage output.
+  - pulls Stage2 IOC/config triage output.
 
 Why this matters: it gives you one repeatable path from raw sample to evidence artifacts without hand-clicking every step in IDA.
 
@@ -193,8 +204,11 @@ Why this matters: it gives you one repeatable path from raw sample to evidence a
   - extracts AMSI/ETW patch bytes and anti-sandbox evidence from IDA sqlite.
   - outputs `stage1_evasion_report.json`.
 - `scripts/hunt_stage2_iocs.py`
-  - Stage2 import/string triage for fast IOC surfacing.
+  - Stage2 import/string triage for fast IOC surfacing (includes XORed `Mozilla/5.0` hit extraction).
   - outputs `stage2_ioc_report.json`.
+- `scripts/hunt_stage2_xor_mozilla.py`
+  - reproduces THOR-style XORed `Mozilla/5.0` detection with per-hit offsets/keys.
+  - outputs `stage2_xor_mozilla_report.json`.
 - `scripts/assess_spectralviper_similarity.py`
   - compares behavioral/string overlap against expected marker sets.
   - outputs `spectralviper_similarity_report.json`.
@@ -218,6 +232,7 @@ Net effect: faster orientation for the Stage1 to Stage2 handoff path.
 What it attempts to do on decrypted Stage2:
 - heuristic tagging of possible PEB-walk and API-hash style routines,
 - suspicious string tagging,
+- single-byte XOR `Mozilla/5.0` hit tagging with per-hit XOR keys,
 - likely config blob/data candidate tagging by xref density,
 - best-effort renaming/comments/struct+enum setup.
 
