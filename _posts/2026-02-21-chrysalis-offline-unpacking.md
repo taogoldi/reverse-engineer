@@ -7,7 +7,7 @@ toc: true
 categories: [malware-reversing, threat-intel]
 tags: [chrysalis, lotus-blossom, unpacking, emulation, malware-analysis]
 image:
-  path: /assets/images/quantum-analysis-futuristic.png
+  path: /assets/images/quantum-analysis-futuristic-v2.png
   alt: "Futuristic malware reverse-engineering visualization"
 ---
 
