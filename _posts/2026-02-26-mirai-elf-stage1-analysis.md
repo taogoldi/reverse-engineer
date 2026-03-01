@@ -26,6 +26,16 @@ Acquisition source (defanged): `http://144[.]172[.]108[.]230/bins/mynode.x86_64`
 
 **Working assessment:** Mirai-like Stage1 loader/bot, high confidence.
 
+## Download Artifacts
+
+- Analysis bundle (repo folder): [analysis_data/mirai_mar_2026](https://github.com/taogoldi/analysis_data/tree/main/mirai_mar_2026)
+- Notebook: [mirai_stage1_analysis.ipynb](https://github.com/taogoldi/analysis_data/blob/main/mirai_mar_2026/notebooks/mirai_stage1_analysis.ipynb)
+- Scripts: [scripts/](https://github.com/taogoldi/analysis_data/tree/main/mirai_mar_2026/scripts)
+- IDA Python: [ida/](https://github.com/taogoldi/analysis_data/tree/main/mirai_mar_2026/ida)
+- Reports: [reports/](https://github.com/taogoldi/analysis_data/tree/main/mirai_mar_2026/reports)
+- YARA (high fidelity): [mirai_like_d40cf9_stage1_highfidelity.yar](https://github.com/taogoldi/YARA/blob/main/botnets/mirai/mirai_like_d40cf9_stage1_highfidelity.yar)
+- YARA (variant heuristic): [mirai_like_d40cf9_stage1_variant_heuristic.yar](https://github.com/taogoldi/YARA/blob/main/botnets/mirai/mirai_like_d40cf9_stage1_variant_heuristic.yar)
+
 ## Executive Workflow
 
 ![Mirai Stage1 Workflow](/assets/images/posts/mirai/mirai_stage1_workflow.svg)
@@ -110,7 +120,7 @@ Main dispatch assembly excerpt from `main` (`0x400412` to `0x400703`):
 400703: call 0x400f60 <method_udpburst>
 ```
 
-This excerpt is from `/Users/yakovgoldberg/Projects/Malware/Mirai/reports/disasm/main.asm` and matches the dispatch table above.
+This excerpt is from `reports/disasm/main.asm` in the published analysis bundle and matches the dispatch table above.
 
 ### 3) Runs anti-competition logic in parallel
 
@@ -219,6 +229,8 @@ Conservative conclusion: Mirai-lineage overlap, but not enough to claim same cam
 
 All outputs below are generated from scripts in `malware/Mirai`.
 
+Public script bundle: [analysis_data/mirai_mar_2026/scripts](https://github.com/taogoldi/analysis_data/tree/main/mirai_mar_2026/scripts)
+
 ### End-to-end run
 
 ```bash
@@ -250,7 +262,7 @@ python3 scripts/parse_helper_capa_summary.py
 
 ### Notebook
 
-- `notebooks/mirai_stage1_analysis.ipynb`
+- [`notebooks/mirai_stage1_analysis.ipynb`](https://github.com/taogoldi/analysis_data/blob/main/mirai_mar_2026/notebooks/mirai_stage1_analysis.ipynb)
 
 What it does:
 
@@ -260,23 +272,25 @@ What it does:
 
 ### IDA scripts
 
-- `ida_python/mirai_stage1_annotator.py`
+- [`ida/mirai_stage1_annotator.py`](https://github.com/taogoldi/analysis_data/blob/main/mirai_mar_2026/ida/mirai_stage1_annotator.py)
   - Renames core functions/data symbols.
   - Adds comments for C2 trust gate, dispatch points, and killer loop.
 
-- `ida_python/mirai_string_hunt_annotator.py`
+- [`ida/mirai_string_hunt_annotator.py`](https://github.com/taogoldi/analysis_data/blob/main/mirai_mar_2026/ida/mirai_string_hunt_annotator.py)
   - Finds high-signal strings and tags xrefs for fast triage.
 
-- `ida_python/mirai_dns_resolver_pattern_annotator.py`
+- [`ida/mirai_dns_resolver_pattern_annotator.py`](https://github.com/taogoldi/analysis_data/blob/main/mirai_mar_2026/ida/mirai_dns_resolver_pattern_annotator.py)
   - Variant-agnostic byte-pattern search for DNS decode logic.
   - Renames/types resolver functions and injects decode comments without hardcoded addresses.
 
-- `ida_python/mirai_dns_resolver_annotator.py`
+- [`ida/mirai_dns_resolver_annotator.py`](https://github.com/taogoldi/analysis_data/blob/main/mirai_mar_2026/ida/mirai_dns_resolver_annotator.py)
   - Sample-specific resolver annotations (address-driven convenience script).
 
 ## YARA Rules
 
-Rules file: `detection/mirai_like_d40cf9_rules.yar`
+Rules files:
+- [mirai_like_d40cf9_stage1_highfidelity.yar](https://github.com/taogoldi/YARA/blob/main/botnets/mirai/mirai_like_d40cf9_stage1_highfidelity.yar)
+- [mirai_like_d40cf9_stage1_variant_heuristic.yar](https://github.com/taogoldi/YARA/blob/main/botnets/mirai/mirai_like_d40cf9_stage1_variant_heuristic.yar)
 
 ```yara
 rule MIRAI_LIKE_D40CF9_STAGE1_HighFidelity
