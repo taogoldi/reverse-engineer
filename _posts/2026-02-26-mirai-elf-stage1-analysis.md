@@ -5,7 +5,8 @@ permalink: /blog/mirai-elf-stage1-analysis/
 date: 2026-02-26 00:00:00 +0000
 toc: true
 image:
-  path: /assets/images/posts/mirai/mirai_stage1_header.png
+  path: /assets/images/social/mirai-stage1-card-v1.jpg
+  alt: "Mirai-like Stage1 analysis social preview card"
 categories: [malware-reversing, threat-intel]
 tags: [mirai, elf, linux-malware, ddos, botnet, yara, static-analysis, ida-pro]
 ---
