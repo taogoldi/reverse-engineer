@@ -285,7 +285,7 @@ rule MIRAI_LIKE_D40CF9_STAGE1_HighFidelity
     author = "taogoldi"
     date = "2026-02-26"
     version = "1"
-    sample_sha256 = "d40cf9c95dcedf4f19e4a5f5bb744c8e98af87eb5703c850e6fda3b613668c28"
+    sha256 = "d40cf9c95dcedf4f19e4a5f5bb744c8e98af87eb5703c850e6fda3b613668c28"
     description = "High-fidelity rule for the analyzed Mirai-like ELF sample"
 
   strings:
@@ -307,7 +307,7 @@ rule MIRAI_LIKE_D40CF9_STAGE1_VariantHeuristic
     author = "taogoldi"
     date = "2026-02-26"
     version = "1"
-    sample_sha256 = "d40cf9c95dcedf4f19e4a5f5bb744c8e98af87eb5703c850e6fda3b613668c28"
+    sha256 = "d40cf9c95dcedf4f19e4a5f5bb744c8e98af87eb5703c850e6fda3b613668c28"
     description = "Heuristic Mirai-like detector for this cluster family"
 
   strings:
