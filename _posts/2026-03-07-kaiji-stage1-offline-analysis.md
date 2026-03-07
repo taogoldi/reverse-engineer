@@ -1,5 +1,6 @@
 ---
 title: "Kaiji-Like Linux ELF Reversing: Persistence, C2 Token Recovery, and Ares Module Mapping"
+permalink: /blog/kaiji-stage1-offline-analysis/
 date: 2026-03-07 00:00:00 +0000
 categories: [malware-reversing, threat-intel]
 tags: [kaiji, ares, linux-malware, elf, botnet, static-analysis, yara, ida-pro]
