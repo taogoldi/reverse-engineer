@@ -45,7 +45,6 @@ Acquisition source (defanged): `http://144[.]172[.]108[.]230/bins/mynode.x86_64`
 I reran the same scripts, notebook flow, and YARA checks against:
 
 - `094e9d6ee057d38f40c35f018488e35ab6ccd006ed261b17322e78fd5ea2c0cb.elf`
-- helper file `input/capa_094e9d6ee057d38f40c35f018488e35ab6ccd006ed261b17322e78fd5ea2c0cb.json`
 
 What changed:
 
@@ -265,14 +264,13 @@ python3 scripts/run_full_analysis.py
 
 ```bash
 python3 scripts/run_full_analysis.py --sample input/d40cf9c95dcedf4f19e4a5f5bb744c8e98af87eb5703c850e6fda3b613668c28.elf --outdir reports/variant_d40cf9c95dce
-python3 scripts/run_full_analysis.py --sample input/094e9d6ee057d38f40c35f018488e35ab6ccd006ed261b17322e78fd5ea2c0cb.elf --outdir reports/variant_094e9d6ee057 --capa-json input/capa_094e9d6ee057d38f40c35f018488e35ab6ccd006ed261b17322e78fd5ea2c0cb.json
+python3 scripts/run_full_analysis.py --sample input/094e9d6ee057d38f40c35f018488e35ab6ccd006ed261b17322e78fd5ea2c0cb.elf --outdir reports/variant_094e9d6ee057
 
 python3 scripts/triage_mirai_elf.py --sample input/<sha>.elf --outdir reports/variant_<sha12>
 python3 scripts/extract_mirai_rodata_artifacts.py --sample input/<sha>.elf --outdir reports/variant_<sha12>
 python3 scripts/extract_command_dispatch.py --sample input/<sha>.elf --triage-json reports/variant_<sha12>/json/triage_report.json --outdir reports/variant_<sha12>
 python3 scripts/export_disasm_slices.py --sample input/<sha>.elf --outdir reports/variant_<sha12>/disasm
 python3 scripts/compare_fortinet_gayfemboy.py --sample input/<sha>.elf --out reports/variant_<sha12>/json/fortinet_gayfemboy_overlap.json
-python3 scripts/parse_helper_capa_summary.py --sample input/<sha>.elf --input input/capa_<sha>.json --out reports/variant_<sha12>/json/helper_capa_summary.json
 ```
 
 ### Artifacts produced
@@ -281,7 +279,6 @@ python3 scripts/parse_helper_capa_summary.py --sample input/<sha>.elf --input in
 - `reports/variant_<sha12>/json/rodata_artifacts.json`
 - `reports/variant_<sha12>/json/command_dispatch_map.json`
 - `reports/variant_<sha12>/json/fortinet_gayfemboy_overlap.json`
-- `reports/variant_<sha12>/json/helper_capa_summary.json`
 - `reports/variant_<sha12>/disasm/*.asm`
 - `reports/static/*.txt`
 
@@ -327,7 +324,7 @@ rule MIRAI_LIKE_D40CF9_STAGE1_HighFidelity
   meta:
     author = "taogoldi"
     date = "2026-02-26"
-    version = "1"
+    version = "2"
     sha256 = "d40cf9c95dcedf4f19e4a5f5bb744c8e98af87eb5703c850e6fda3b613668c28"
     description = "High-fidelity rule for the analyzed Mirai-like ELF sample"
 
@@ -349,7 +346,7 @@ rule MIRAI_LIKE_D40CF9_STAGE1_VariantHeuristic
   meta:
     author = "taogoldi"
     date = "2026-02-26"
-    version = "1"
+    version = "2"
     sha256 = "d40cf9c95dcedf4f19e4a5f5bb744c8e98af87eb5703c850e6fda3b613668c28"
     description = "Heuristic Mirai-like detector for this cluster family"
 
@@ -375,7 +372,7 @@ rule MIRAI_LIKE_094E9_STAGE1_HighFidelity
   meta:
     author = "taogoldi"
     date = "2026-03-07"
-    version = "1"
+    version = "2"
     sha256 = "094e9d6ee057d38f40c35f018488e35ab6ccd006ed261b17322e78fd5ea2c0cb"
     description = "High-fidelity rule for the validated Mirai-like variant (094e...)"
 
@@ -400,7 +397,7 @@ rule MIRAI_LIKE_STAGE1_Family_Heuristic
   meta:
     author = "taogoldi"
     date = "2026-03-07"
-    version = "1"
+    version = "2"
     description = "Family-level heuristic intended to match both d40... and 094e... Mirai-like variants"
 
   strings:
