@@ -246,7 +246,6 @@ python3 scripts/extract_mirai_rodata_artifacts.py
 python3 scripts/extract_command_dispatch.py
 python3 scripts/export_disasm_slices.py
 python3 scripts/compare_fortinet_gayfemboy.py
-python3 scripts/parse_helper_capa_summary.py
 ```
 
 ### Artifacts produced
@@ -255,7 +254,6 @@ python3 scripts/parse_helper_capa_summary.py
 - `reports/json/rodata_artifacts.json`
 - `reports/json/command_dispatch_map.json`
 - `reports/json/fortinet_gayfemboy_overlap.json`
-- `reports/json/helper_capa_summary.json`
 - `reports/disasm/*.asm`
 - `reports/static/*.txt`
 

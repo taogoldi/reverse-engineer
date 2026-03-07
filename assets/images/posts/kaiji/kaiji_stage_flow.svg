@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="1640" viewBox="0 0 980 1640">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#081a47"/><stop offset="100%" stop-color="#123a73"/></linearGradient></defs>
+<rect width="100%" height="100%" fill="url(#bg)"/>
+<style>.box{fill:#d9deec;stroke:#9fb2d9;stroke-width:2;} .txt{font-family:Arial,Helvetica,sans-serif;font-size:34px;font-weight:700;fill:#1b2a4d;} .arrow{stroke:#263f84;stroke-width:7;marker-end:url(#arr);} </style>
+<defs><marker id="arr" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#263f84"/></marker></defs>
+<rect class="box" x="110" y="60" width="760" height="140" rx="14" ry="14"/>
+<text class="txt" x="490.0" y="142.0" text-anchor="middle">Initial execution of linux_amd64</text>
+<line class="arrow" x1="490.0" y1="200" x2="490.0" y2="258"/>
+<rect class="box" x="110" y="270" width="760" height="140" rx="14" ry="14"/>
+<text class="txt" x="490.0" y="352.0" text-anchor="middle">Self-install and persistence prep</text>
+<line class="arrow" x1="490.0" y1="410" x2="490.0" y2="468"/>
+<rect class="box" x="110" y="480" width="760" height="140" rx="14" ry="14"/>
+<text class="txt" x="490.0" y="562.0" text-anchor="middle">Systemd + cron persistence artifacts</text>
+<line class="arrow" x1="490.0" y1="620" x2="490.0" y2="678"/>
+<rect class="box" x="110" y="690" width="760" height="140" rx="14" ry="14"/>
+<text class="txt" x="490.0" y="772.0" text-anchor="middle">Decode embedded Base64 C2 token</text>
+<line class="arrow" x1="490.0" y1="830" x2="490.0" y2="888"/>
+<rect class="box" x="110" y="900" width="760" height="140" rx="14" ry="14"/>
+<text class="txt" x="490.0" y="982.0" text-anchor="middle">Socket setup and command channel</text>
+<line class="arrow" x1="490.0" y1="1040" x2="490.0" y2="1098"/>
+<rect class="box" x="110" y="1110" width="760" height="140" rx="14" ry="14"/>
+<text class="txt" x="490.0" y="1192.0" text-anchor="middle">Dispatch Ares attack modules</text>
+<line class="arrow" x1="490.0" y1="1250" x2="490.0" y2="1308"/>
+<rect class="box" x="110" y="1320" width="760" height="140" rx="14" ry="14"/>
+<text class="txt" x="490.0" y="1402.0" text-anchor="middle">Watchdog and killcpu support routines</text>
+</svg>
