@@ -22,10 +22,11 @@ For technical readers: all findings below are tied to reproducible scripts, offs
 | Artifact | SHA-256 |
 | --- | --- |
 | `d40cf9c95dcedf4f19e4a5f5bb744c8e98af87eb5703c850e6fda3b613668c28.elf` (Stage1 sample) | `d40cf9c95dcedf4f19e4a5f5bb744c8e98af87eb5703c850e6fda3b613668c28` |
+| `094e9d6ee057d38f40c35f018488e35ab6ccd006ed261b17322e78fd5ea2c0cb.elf` (Variant validation sample) | `094e9d6ee057d38f40c35f018488e35ab6ccd006ed261b17322e78fd5ea2c0cb` |
 
 Acquisition source (defanged): `http://144[.]172[.]108[.]230/bins/mynode.x86_64`
 
-**Working assessment:** Mirai-like Stage1 loader/bot, high confidence.
+**Working assessment:** Mirai-like Stage1 loader/bot, high confidence for lineage overlap.
 
 ## Download Artifacts
 
@@ -36,6 +37,28 @@ Acquisition source (defanged): `http://144[.]172[.]108[.]230/bins/mynode.x86_64`
 - Reports: [reports/](https://github.com/taogoldi/analysis_data/tree/main/mirai_mar_2026/reports)
 - YARA (high fidelity): [mirai_like_d40cf9_stage1_highfidelity.yar](https://github.com/taogoldi/YARA/blob/main/botnets/mirai/mirai_like_d40cf9_stage1_highfidelity.yar)
 - YARA (variant heuristic): [mirai_like_d40cf9_stage1_variant_heuristic.yar](https://github.com/taogoldi/YARA/blob/main/botnets/mirai/mirai_like_d40cf9_stage1_variant_heuristic.yar)
+- YARA (new variant high fidelity): [mirai_like_094e9_stage1_highfidelity.yar](https://github.com/taogoldi/YARA/blob/main/botnets/mirai/mirai_like_094e9_stage1_highfidelity.yar)
+- YARA (family heuristic, both variants): [mirai_like_stage1_family_heuristic.yar](https://github.com/taogoldi/YARA/blob/main/botnets/mirai/mirai_like_stage1_family_heuristic.yar)
+
+## Cross-Variant Validation (094e... sample)
+
+I reran the same scripts, notebook flow, and YARA checks against:
+
+- `094e9d6ee057d38f40c35f018488e35ab6ccd006ed261b17322e78fd5ea2c0cb.elf`
+- helper file `input/capa_094e9d6ee057d38f40c35f018488e35ab6ccd006ed261b17322e78fd5ea2c0cb.json`
+
+What changed:
+
+- This variant does not expose the same named `method_*` symbol set as the original sample
+- It still exposes resolver and flood-family markers (`__dns_lookup`, `udpfl00d`, `tcpFl00d`, `ovhudpflood`, `watchdog_maintain`)
+- The pipeline now emits variant-scoped reports under `reports/variant_<sha12>/...` so runs do not overwrite each other
+- Dispatch mapping falls back to heuristic mode when callsite-level symbols are missing
+
+YARA validation now covers both files:
+
+- `MIRAI_LIKE_D40CF9_STAGE1_HighFidelity` + `MIRAI_LIKE_D40CF9_STAGE1_VariantHeuristic` hit on `d40...`
+- `MIRAI_LIKE_094E9_STAGE1_HighFidelity` hits on `094e...`
+- `MIRAI_LIKE_STAGE1_Family_Heuristic` hits on both
 
 ## Executive Workflow
 
@@ -241,20 +264,25 @@ python3 scripts/run_full_analysis.py
 ### Step-by-step scripts
 
 ```bash
-python3 scripts/triage_mirai_elf.py
-python3 scripts/extract_mirai_rodata_artifacts.py
-python3 scripts/extract_command_dispatch.py
-python3 scripts/export_disasm_slices.py
-python3 scripts/compare_fortinet_gayfemboy.py
+python3 scripts/run_full_analysis.py --sample input/d40cf9c95dcedf4f19e4a5f5bb744c8e98af87eb5703c850e6fda3b613668c28.elf --outdir reports/variant_d40cf9c95dce
+python3 scripts/run_full_analysis.py --sample input/094e9d6ee057d38f40c35f018488e35ab6ccd006ed261b17322e78fd5ea2c0cb.elf --outdir reports/variant_094e9d6ee057 --capa-json input/capa_094e9d6ee057d38f40c35f018488e35ab6ccd006ed261b17322e78fd5ea2c0cb.json
+
+python3 scripts/triage_mirai_elf.py --sample input/<sha>.elf --outdir reports/variant_<sha12>
+python3 scripts/extract_mirai_rodata_artifacts.py --sample input/<sha>.elf --outdir reports/variant_<sha12>
+python3 scripts/extract_command_dispatch.py --sample input/<sha>.elf --triage-json reports/variant_<sha12>/json/triage_report.json --outdir reports/variant_<sha12>
+python3 scripts/export_disasm_slices.py --sample input/<sha>.elf --outdir reports/variant_<sha12>/disasm
+python3 scripts/compare_fortinet_gayfemboy.py --sample input/<sha>.elf --out reports/variant_<sha12>/json/fortinet_gayfemboy_overlap.json
+python3 scripts/parse_helper_capa_summary.py --sample input/<sha>.elf --input input/capa_<sha>.json --out reports/variant_<sha12>/json/helper_capa_summary.json
 ```
 
 ### Artifacts produced
 
-- `reports/json/triage_report.json`
-- `reports/json/rodata_artifacts.json`
-- `reports/json/command_dispatch_map.json`
-- `reports/json/fortinet_gayfemboy_overlap.json`
-- `reports/disasm/*.asm`
+- `reports/variant_<sha12>/json/triage_report.json`
+- `reports/variant_<sha12>/json/rodata_artifacts.json`
+- `reports/variant_<sha12>/json/command_dispatch_map.json`
+- `reports/variant_<sha12>/json/fortinet_gayfemboy_overlap.json`
+- `reports/variant_<sha12>/json/helper_capa_summary.json`
+- `reports/variant_<sha12>/disasm/*.asm`
 - `reports/static/*.txt`
 
 ## Notebook and IDA Scripts
@@ -272,8 +300,8 @@ What it does:
 ### IDA scripts
 
 - [`ida/mirai_stage1_annotator.py`](https://github.com/taogoldi/analysis_data/blob/main/mirai_mar_2026/ida/mirai_stage1_annotator.py)
-  - Renames core functions/data symbols.
-  - Adds comments for C2 trust gate, dispatch points, and killer loop.
+  - Variant-aware function/data symbol pass using both name-based and string-xref pivots.
+  - Adds C2 trust-gate and dispatch comments where structurally valid.
 
 - [`ida/mirai_string_hunt_annotator.py`](https://github.com/taogoldi/analysis_data/blob/main/mirai_mar_2026/ida/mirai_string_hunt_annotator.py)
   - Finds high-signal strings and tags xrefs for fast triage.
@@ -290,6 +318,8 @@ What it does:
 Rules files:
 - [mirai_like_d40cf9_stage1_highfidelity.yar](https://github.com/taogoldi/YARA/blob/main/botnets/mirai/mirai_like_d40cf9_stage1_highfidelity.yar)
 - [mirai_like_d40cf9_stage1_variant_heuristic.yar](https://github.com/taogoldi/YARA/blob/main/botnets/mirai/mirai_like_d40cf9_stage1_variant_heuristic.yar)
+- [mirai_like_094e9_stage1_highfidelity.yar](https://github.com/taogoldi/YARA/blob/main/botnets/mirai/mirai_like_094e9_stage1_highfidelity.yar)
+- [mirai_like_stage1_family_heuristic.yar](https://github.com/taogoldi/YARA/blob/main/botnets/mirai/mirai_like_stage1_family_heuristic.yar)
 
 ```yara
 rule MIRAI_LIKE_D40CF9_STAGE1_HighFidelity
@@ -338,6 +368,64 @@ rule MIRAI_LIKE_D40CF9_STAGE1_VariantHeuristic
   condition:
     uint32(0) == 0x464c457f and
     7 of ($m*)
+}
+
+rule MIRAI_LIKE_094E9_STAGE1_HighFidelity
+{
+  meta:
+    author = "taogoldi"
+    date = "2026-03-07"
+    version = "1"
+    sha256 = "094e9d6ee057d38f40c35f018488e35ab6ccd006ed261b17322e78fd5ea2c0cb"
+    description = "High-fidelity rule for the validated Mirai-like variant (094e...)"
+
+  strings:
+    $s1 = "watchdog_maintain" ascii
+    $s2 = "watchdog_pid" ascii
+    $s3 = "udpfl00d" ascii
+    $s4 = "tcpFl00d" ascii
+    $s5 = "ovhudpflood" ascii
+    $s6 = "TSource Engine Query" ascii
+    $s7 = "KHserverHACKER" ascii
+    $s8 = "/etc/config/resolv.conf" ascii
+    $s9 = "__open_nameservers" ascii
+    $s10 = "dnslookup.c" ascii
+
+  condition:
+    uint32(0) == 0x464c457f and 7 of ($s*)
+}
+
+rule MIRAI_LIKE_STAGE1_Family_Heuristic
+{
+  meta:
+    author = "taogoldi"
+    date = "2026-03-07"
+    version = "1"
+    description = "Family-level heuristic intended to match both d40... and 094e... Mirai-like variants"
+
+  strings:
+    $core1 = "/etc/config/resolv.conf" ascii
+    $core2 = "__open_nameservers" ascii
+    $core3 = "dnslookup.c" ascii
+    $core4 = "opennameservers.c" ascii
+    $core5 = "__dns_lookup" ascii
+
+    $old1 = "!SIGKILL" ascii
+    $old2 = "M-SEARCH * HTTP/1.1" ascii
+    $old3 = "Via: SIP/2.0/UDP 192.168.1.1:5060" ascii
+    $old4 = "udpburst" ascii
+    $old5 = "udpslam" ascii
+
+    $new1 = "watchdog_maintain" ascii
+    $new2 = "udpfl00d" ascii
+    $new3 = "tcpFl00d" ascii
+    $new4 = "ovhudpflood" ascii
+    $new5 = "TSource Engine Query" ascii
+
+  condition:
+    uint32(0) == 0x464c457f and
+    3 of ($core*) and
+    (2 of ($old*) or 2 of ($new*))
 }
 ```
 
