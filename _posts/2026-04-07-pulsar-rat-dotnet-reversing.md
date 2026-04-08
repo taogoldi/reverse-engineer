@@ -953,6 +953,77 @@ TcpClient(host, port) ← host comes from XfvRhfc8YGggaI.T1hPcB5PAVrkADQaPu94
                        → T1hPcB5PAVrkADQaPu94 = ServerHosts (encrypted)
 ```
 
+### Tooling: Automated Deobfuscation
+
+**Tool 1: de4dot-cex** (binary-level, pre-decompilation)
+
+[de4dot-cex](https://github.com/ViRb3/de4dot-cex) is a de4dot fork with full ConfuserEx support. Run it on the unpacked .NET binary *before* opening in dnSpy — it will strip control flow obfuscation, decrypt strings, remove proxy calls, and rename some identifiers:
+
+```bash
+# Basic ConfuserEx deobfuscation
+de4dot-x64.exe RMnsgES_unpacked.exe -p crx
+
+# Output: RMnsgES_unpacked-cleaned.exe
+# Open the cleaned binary in dnSpy for dramatically improved readability
+```
+
+This handles the IL-level obfuscation (control flow flattening, string encryption, proxy delegates) but does **not** rename ConfuserEx's randomized identifiers to their original names — that requires semantic analysis.
+
+**Tool 2: deobfuscate_confuserex.py** (source-level, post-decompilation)
+
+We wrote a Python script that analyzes dnSpy-exported C# source code and automatically maps obfuscated identifiers to their original names using the four techniques above. Available in the [analysis bundle](https://github.com/taogoldi/analysis_data/tree/main/pulsar_rat_apr_2026/scripts):
+
+```bash
+# Run on a dnSpy-exported project directory
+python deobfuscate_confuserex.py ./Client/ -o deobfuscation_report.json
+```
+
+The script scans all `.cs` files and produces:
+- **P/Invoke map** — every obfuscated native method mapped to real Win32 API name (extracted from `[DllImport(EntryPoint="...")]`)
+- **Settings class identification** — finds the class with `Aes256` constructor + encrypted static fields
+- **Class role classification** — maps obfuscated class names to likely original names via string/API pattern matching
+- **Namespace purpose map** — groups namespaces by detected capability (credential theft, persistence, C2, etc.)
+
+Example output (truncated):
+
+```
+CONFUSEREX DEOBFUSCATION REPORT
+========================================================================
+Files analyzed: 166
+
+─── SETTINGS CLASS (C2 Configuration) ───
+  Obfuscated: XfvRhfc8YGggaI
+  Namespace:  bjaeujhapczempm
+  Encrypted fields: 13
+    mptvvvwEX9ovort = "F00D8BB24970E7D1F5959C85D7084E366FF0C645"
+    T1hPcB5PAVrkADQaPu94 = "TC5OcTmSU2VZ7Ycmdtrl2d9BQXOK+bBv..."
+
+─── P/INVOKE DEOBFUSCATION (300 APIs) ───
+  3fcF2iBhUFVqHZyhCdAnOv1tH         → AddClipboardFormatListener
+  HbYFM9hfsVIroN1rby0dI             → VirtualProtectEx
+  vNB6swy1D8tjt                     → WriteProcessMemory
+  ZryrNuUDyBFY2cLxp3                → OpenProcess
+  ...
+
+─── CLASS IDENTIFICATIONS (42 matched) ───
+  [HIGH  ] XfvRhfc8YGggaI           → Settings
+  [HIGH  ] cTFllqAFhI               → ChromiumDecryptor
+  [HIGH  ] Kywq7ERTKW7bEUCI         → AesGcmDecryptor
+  [HIGH  ] Zkijqbq1ZDl8Umj          → OperaPatcher
+  [HIGH  ] 1OaugIljVER7J5SeXW0HN    → WindowsRecoveryPersistence
+  [HIGH  ] WalddVelQIshHagR         → ClipboardMonitor
+  [MEDIUM] hZsJYgkYyHFYj            → ChromiumCredentialReader
+  [MEDIUM] nraoGHg1NSoBOR           → FirefoxDecryptor
+  ...
+```
+
+**Recommended workflow:**
+
+1. Unpack with MPRESS unpacker or run through [de4dot-cex](https://github.com/ViRb3/de4dot-cex) for IL-level cleanup
+2. Open cleaned binary in dnSpy, then Export to Project (C# .sln)
+3. Run `deobfuscate_confuserex.py` on the exported source for semantic name recovery
+4. Use the JSON report alongside dnSpy for annotated analysis
+
 ### Deobfuscation Map: Namespaces
 
 | Obfuscated Namespace | Original Module | Evidence |
