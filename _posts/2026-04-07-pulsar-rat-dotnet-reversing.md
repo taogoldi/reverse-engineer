@@ -8,11 +8,7 @@ image: /assets/images/social/pulsar-rat-card.png
 description: "Offline static analysis of an MPRESS-packed Pulsar RAT variant: Costura extraction, AES-256 C2 protocol reversal, DPAPI credential theft, ConfuserEx deobfuscation, and Windows RE persistence — with reproducible tooling and YARA rules."
 ---
 
-# Pulsar RAT .NET Reversing: C2 Protocol Recovery, Costura Extraction, and DPAPI Credential Theft Pipeline
-
-**Tao Goldi** | April 4, 2026 | 18 min read
-
-Offline static analysis of an MPRESS-packed Pulsar RAT variant (QuasarRAT fork). This write-up covers Costura dependency extraction, AES-256/MessagePack C2 protocol reversal from decompiled IL, DPAPI browser credential theft walkthrough, and process injection chain mapping — all with reproducible tooling and YARA detection rules.
+Offline static analysis of an MPRESS-packed Pulsar RAT variant (QuasarRAT fork). This write-up covers Costura dependency extraction, AES-256/MessagePack C2 protocol reversal from decompiled IL, DPAPI browser credential theft walkthrough, ConfuserEx deobfuscation, and process injection chain mapping — all with reproducible tooling and YARA detection rules.
 
 All offsets, DN tokens, and IL references point into the sample listed below. No dynamic execution was performed.
 
@@ -69,8 +65,43 @@ If you're not deep into .NET internals, here's a quick reference for the termino
 
 ## Stage Flow
 
-<!-- Stage flow diagram: see docs/pulsar_stage_flow.md for Mermaid source -->
-*Render from `docs/pulsar_stage_flow.md` — delivery → MPRESS unpack → Costura loader → anti-analysis → C2 init → command dispatch*
+```mermaid
+graph TD
+    A[Delivery: RMnsgES.exe] --> B[MPRESS Unpacking Stub]
+    B --> C[.NET CLR Bootstrap]
+    C --> D["Costura Module Loader Hook<br/>(Module..cctor → AssemblyLoader.Attach)"]
+    D --> E[AppDomain.AssemblyResolve]
+    E --> F[Decompress Pulsar.Common.dll]
+    E --> G[Decompress MessagePack.dll]
+    E --> H[Decompress System.*.dll deps]
+    
+    F --> I[Settings.suvQ4Oayzg — AES Decrypt Config]
+    I --> I2[RSA-SHA256 Verify Key Signature]
+    I2 --> J[Anti-Analysis Checks]
+    J -->|Debugger/Sandbox/VM| K[Exit / Sleep]
+    J -->|Clean| L[Initialize PulsarClient]
+    
+    L --> M[Gather System Info + GeoIP]
+    M --> N[TCP Connect to C2]
+    N --> O["Send ClientIdentification<br/>(SecureMessageEnvelope)"]
+    O --> P[Command Dispatch Loop]
+    
+    P --> Q{Command Type}
+    Q -->|Desktop/HVNC| R[Remote Desktop + Hidden VNC]
+    Q -->|Keylog| S[Global Keyboard Hook]
+    Q -->|Credentials| T[Browser Harvester]
+    Q -->|Clipboard| U[Crypto Clipper — 9 currencies]
+    Q -->|Persistence| V[schtasks + Registry + WinRE]
+    Q -->|Shell/Script| W[cmd.exe / PowerShell / VBS / JS]
+    Q -->|Surveillance| X[Webcam + Mic + Speaker]
+    Q -->|Plugin| Y[Deferred Assembly Loader]
+    
+    T --> T1[Chrome: Login Data + DPAPI + AES-GCM]
+    T --> T2[Firefox: logins.json + NSS3]
+    T --> T3[Opera: Chromium Store + GetCursorInfo Patch]
+    T --> T4[Brave/Opera GX: Chromium Store]
+    T --> T5[CloneBrowserProfile: Full Identity Takeover]
+```
 
 ---
 
@@ -258,7 +289,27 @@ The full wire format, reconstructed from the send/receive methods at DN tokens `
 └──────────┴───────────────────────────────────────────────────┘
 ```
 
-
+```mermaid
+sequenceDiagram
+    participant Client as Pulsar Client
+    participant Envelope as SecureMessageEnvelope
+    participant MP as MessagePack
+    participant C2 as C2 Server
+    
+    Client->>MP: Serialize(ClientIdentification)
+    MP->>Envelope: Wrap(message, X509Cert)
+    Envelope->>C2: TCP Send([len][IV][AES-CBC ciphertext])
+    
+    C2->>Envelope: TCP Send([len][IV][AES-CBC command])
+    Envelope->>MP: Unwrap(envelope, X509Cert)
+    MP->>Client: Deserialize → IMessage
+    
+    Client->>Client: MessageHandler.Process(command)
+    
+    Client->>MP: Serialize(Response)
+    MP->>Envelope: Wrap(response, X509Cert)
+    Envelope->>C2: TCP Send([len][IV][AES-CBC ciphertext])
+```
 
 ### Extracting the Encryption Key
 
@@ -365,6 +416,34 @@ class PulsarDecoder:
 ## Deep Dive: DPAPI Credential Theft
 
 ### How the Browser Harvester Works
+
+```mermaid
+graph TD
+    A[GetPasswords Command] --> B[BrowserDiscovery: Scan AppData]
+    B --> C{Browser Type?}
+    
+    C -->|Chromium| D[Locate User Data/Local State]
+    D --> D1["FileHandlerXeno.ForceReadFile(Login Data)<br/>— bypasses browser file lock"]
+    D1 --> D2[Custom SQLite Parser: Extract password_value]
+    D2 --> D3{Password Format?}
+    D3 -->|v10 prefix| D4["AES-GCM Decrypt<br/>(DPAPI master key + 12-byte nonce)"]
+    D3 -->|Legacy| D5["DPAPI ProtectedData.Unprotect<br/>(CurrentUser scope)"]
+    D4 --> E[RecoveredAccount: URL + User + Password]
+    D5 --> E
+    
+    C -->|Firefox/Gecko| F[Parse profiles.ini]
+    F --> F1["LoadLibrary(mozglue.dll, nss3.dll)"]
+    F1 --> F2[NSS_Init with profile directory]
+    F2 --> F3[Read logins.json or signons.sqlite]
+    F3 --> F4["PK11SDR_Decrypt(encryptedUsername/Password)"]
+    F4 --> E
+    
+    C -->|Opera| G[Opera-specific path]
+    G --> G1["PatchOperaAsync: Patch GetCursorInfo<br/>(mov eax,1; ret)"]
+    G1 --> D1
+    
+    E --> H[Send to C2 via SetRecoveredPasswords]
+```
 
 The credential theft pipeline targets five browsers through Chromium-specific and Firefox-specific paths. All operations are async — the `d__XX` suffixes are compiler-generated state machine indices that survived obfuscation.
 
@@ -498,6 +577,23 @@ This makes the thread invisible to debuggers attached to the target process.
 ## Anti-Analysis Decision Tree
 
 The anti-analysis suite runs at startup before any C2 connection. The sequence, reconstructed from DN token cross-references:
+
+```mermaid
+graph LR
+    A[Startup] --> B{IsDebuggerPresent?<br/>0x60007FC}
+    B -->|Yes| X[Terminate / Sleep]
+    B -->|No| C{ProcessDebugPort?<br/>0x6000801}
+    C -->|Attached| X
+    C -->|Clean| D{ProcessDebugFlags?<br/>0x6000800}
+    D -->|Debug| X
+    D -->|Clean| E{Sandbox Hostname?<br/>0x600075F}
+    E -->|Match| X
+    E -->|Clean| F{Sandbox Username?<br/>0x600075F}
+    F -->|Match| X
+    F -->|Clean| G{VM Strings?<br/>VBox/VMWare/Qemu}
+    G -->|Detected| X
+    G -->|Clean| H[Proceed → C2 Connect]
+```
 
 ```
 Start
@@ -1048,6 +1144,33 @@ byte[] patch = new byte[] { 0xB8, 0x01, 0x00, 0x00, 0x00, 0xC3 };
 ## Deep Dive: Windows Recovery Environment Persistence
 
 The most sophisticated persistence mechanism in this sample. The `1OaugIljVER7J5SeXW0HN` class (namespace `fknzwcqedcjvgvtfoeppsxi`) survives full Windows Reset operations:
+
+```mermaid
+graph TD
+    A["DoAddWinREPersistence"] --> B["Create C:\Recovery\OEM\"]
+    B --> C["Drop payload with random 20-char name"]
+    C --> D{ResetConfig.xml exists?}
+    
+    D -->|No| E["Create new ResetConfig.xml"]
+    D -->|Yes| F["Parse existing XML,<br/>chain after existing hooks"]
+    
+    E --> G["Add Run element:<br/>BasicReset_AfterImageApply"]
+    E --> H["Add Run element:<br/>FactoryReset_AfterImageApply"]
+    F --> G
+    F --> H
+    
+    G --> I["Generate batch script"]
+    H --> I
+    I --> I1["reg load HKLM\{random} %TARGETOS%\...\SOFTWARE"]
+    I1 --> I2["reg add RunOnce → payload path"]
+    I2 --> I3["reg unload"]
+    
+    I3 --> J["User triggers 'Reset this PC'"]
+    J --> K["WinRE runs ResetConfig.xml hooks"]
+    K --> L["Batch loads fresh OS registry hive"]
+    L --> M["RunOnce entry persists"]
+    M --> N["First boot after reset → RAT reinstalls"]
+```
 
 **Attack flow:**
 
