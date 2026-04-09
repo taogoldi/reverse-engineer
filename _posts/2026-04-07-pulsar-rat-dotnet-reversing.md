@@ -1307,5 +1307,3 @@ The full deobfuscation of the ConfuserEx-renamed codebase was achieved through f
 ---
 
 *Analysis performed using automated CAPA v9.3.1 / FLOSS pipeline with manual .NET IL cross-reference analysis and decompiled C# source review. All indicators derived from static analysis — no dynamic execution was performed. Obfuscated field mappings are inferred through data-flow tracing from known API sinks.*
-
-*Licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).*

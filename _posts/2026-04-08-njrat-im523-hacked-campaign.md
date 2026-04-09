@@ -1021,5 +1021,3 @@ Joe Sandbox's threat intel associates njRAT broadly with **AQUATIC PANDA**, **Ea
 ---
 
 *Tools used: ILSpy (decompilation), dnfile/pefile (PE + .NET metadata), custom Python extraction scripts. Dynamic validation via [ANY.RUN](https://any.run/report/ff87cd932e25b024cd10042c186f252fdabdac2c4d4cbc67f89e457697ebbc71/53b4744e-dac1-4bb7-b798-687edc2aca99) and [Joe Sandbox](https://www.joesandbox.com/analysis/1894290/0/html). Win32 API prototypes from [Microsoft Learn](https://learn.microsoft.com/en-us/windows/win32/api/).*
-
-*Licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).*
