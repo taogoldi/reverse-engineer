@@ -869,6 +869,95 @@ The plaintext C2 protocol on port 443 is trivially detectable — a single Suric
 
 ---
 
+## Code Weaknesses and Defensive Opportunities
+
+Reversing the decompiled source revealed several implementation flaws that defenders and incident responders can exploit. These aren't theoretical — they're verified against the actual code.
+
+### The C2 Has Zero Authentication — Sinkhole and Mass-Uninstall
+
+This is the big one. The entire C2 protocol is unauthenticated plaintext TCP. There is no TLS handshake, no challenge-response, no HMAC, no session token — nothing. The framing is just `<decimal_length>\0<UTF-8 payload>` with `|'|'|` delimiters.
+
+A defender who sinkoles `phishing.multimilliontoken.org` (via DNS or network controls) can stand up a listener on port 443 that:
+
+1. Accepts each bot's TCP connection
+2. Receives the `ll` identification beacon
+3. Sends back `un|'|'|~` — which triggers `UNS()`, the full uninstall sequence
+
+`UNS()` in the decompiled source (OK.cs) does everything an incident responder could want: calls `pr(0)` to remove BSoD protection, deletes the Registry Run key, removes the firewall exception, deletes the Startup folder copy, wipes the `HKCU\Software\<mutex>` registry subkey, and self-deletes via `cmd.exe /k ping 0 & del`. No authentication is checked. This is a one-command kill switch for every connected bot.
+
+### The Keylogger Has a Fatal Bug — Persistence Is Dead Code
+
+This one surprised me. The `kl.WRK()` keylogger loop has a counter variable `num` that's supposed to trigger registry persistence every 1000 iterations:
+
+```csharp
+while (true)
+{
+    int num = 1;              // ← reset to 1 EVERY iteration of the outer loop
+    // ... key scanning ...
+    if (num == 1000)          // ← will NEVER be true
+    {
+        OK.STV(vn, Logs, RegistryValueKind.String);   // dead code
+    }
+    Thread.Sleep(1);
+}
+```
+
+`num` is declared *inside* the `while(true)` loop and initialized to 1 on every iteration. It's never incremented. The `num == 1000` condition can never fire. This means **keylogs are never persisted to the registry** — they exist only in the `Logs` string in memory. If the RAT process crashes or is killed, all captured keystrokes are lost. The operator likely never noticed because the `kl` C2 command reads `Logs` from memory directly, so keylogs appear to work — they're just not crash-safe. This is a quality-of-life bug for defenders: a crash or reboot loses the attacker's keylog buffer entirely.
+
+### The Plugin System Enables Defender Code Injection
+
+The `Plugin()` method loads arbitrary .NET assemblies via `Assembly.Load(byte[])` with zero verification — no hash check, no signature, no sandboxing:
+
+```csharp
+public static object Plugin(byte[] b, string c)
+{
+    Module[] modules = Assembly.Load(b).GetModules();
+    // ... finds class matching 'c', calls CreateInstance ...
+}
+```
+
+A C2 impersonator can send a `PLG` command containing a custom .NET assembly that re-enables Task Manager, CMD, and Registry Editor (reversing the DisableTaskMgr/DisableCMD/DisableRegistry registry writes), wipes the keylog data from memory, removes persistence, and terminates the RAT. The plugin even gets passed the live `TcpClient` connection at line 1054, giving it full network access.
+
+### The UDP Flood Leaks Sockets Until Crash
+
+The `udp` command's flood loop creates a new `Socket` object on every iteration and never closes it:
+
+```csharp
+while (true && udp)
+{
+    Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+    socket.SendTo(buffer, remoteEP);
+    Thread.Sleep(delay);
+    // socket is never closed — handle leaks every iteration
+}
+```
+
+With a low `delay` value, this exhausts the OS handle table within minutes. An operator who uses the DDoS feature ironically destabilizes their own RAT. A defender who impersonates the C2 can trigger this deliberately: send `udp|'|'|127.0.0.1|'|'|1|'|'|0` to start a flood with zero delay against localhost — the RAT will burn through socket handles until it crashes, while the `udpstp` command to stop it requires getting another command through the now-congested TCP connection.
+
+### The Receive Buffer Has a Race Condition
+
+The static `b` buffer (5121 bytes, later resized dynamically) is shared between the `RC()` receive thread and command handler threads spawned via `im()`. The join timeout is only 100ms:
+
+```csharp
+Thread thread = new Thread(im, 1);
+thread.Start(b);
+thread.Join(100);       // if Ind() takes longer than 100ms, b gets overwritten
+```
+
+If a second command arrives within 100ms, `b` is reassigned while the first command's `Ind()` is still reading from it. The `rn` (upload & execute), `inv` (plugin load), and `PLG` commands all do `memoryStream.Write(b, offset, b.Length - offset)` — with a corrupted `b`, the written data is garbled. A defender can exploit this by rapidly flooding commands to corrupt plugin loading or file execution, causing the RAT to write garbage to disk or load invalid assemblies.
+
+### All Stored Data Is Accessible to Any Local Process
+
+Every piece of RAT state — keylogs, plugin binaries, config values, victim identifier — is stored under `HKCU\Software\411e31664bdd9d96369d0a44d5111aef` with default permissions. Any process running as the same user can read it. For incident responders, this means:
+
+```
+reg query HKCU\Software\411e31664bdd9d96369d0a44d5111aef
+```
+
+Returns the complete keylog buffer (under the `[kl]` value), the victim name, and any cached plugin binaries. No special tools needed.
+
+---
+
 ## Appendix A: Automated Triage Scores
 
 The sample was flagged by our automated triage pipeline and confirmed by two independent sandbox services.
