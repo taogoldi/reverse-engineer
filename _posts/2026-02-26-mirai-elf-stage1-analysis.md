@@ -1,9 +1,8 @@
 ---
-layout: post
 title: "Mirai-like ELF Reversing, Part I: Stage1 Trust Gate, Command Dispatch, and Killer Loop"
 permalink: /blog/mirai-elf-stage1-analysis/
 date: 2026-02-26 00:00:00 +0000
-toc: true
+description: "Static analysis of a Mirai-lineage ELF bot covering C2 trust verification, seven-method command dispatch, anti-competition killer logic, and reproducible extraction scripts."
 image:
   path: /assets/images/social/mirai-stage1-card-v1.jpg
   alt: "Mirai-like Stage1 analysis social preview card"
@@ -11,7 +10,7 @@ categories: [malware-reversing, threat-intel]
 tags: [mirai, elf, linux-malware, ddos, botnet, yara, static-analysis, ida-pro]
 ---
 
-This post walks through what we extracted from one Linux ELF sample and how we extracted it, without hand-wavy claims.
+Mirai's source leak in 2016 turned a single botnet into an entire lineage of Linux threats, and new variants keep surfacing on commodity IoT infrastructure. This post tears apart one such sample -- a statically linked x86-64 ELF that showed up on an open download server -- to document exactly how it authenticates to its controller, selects an attack method, and locks out competing malware. Every claim maps to a script, a virtual address, or a disassembly slice you can reproduce yourself.
 
 For less technical readers: this malware is a bot. It connects to a control server, checks that the server is the one it expects, receives commands, and launches network flood routines. At the same time it runs a cleanup loop to remove or kill other tools/processes on the same device.
 
@@ -202,13 +201,13 @@ This aligns with multi-method DDoS behavior and protocol-specific packet craftin
 | `__decode_header` | `0x414034` | Parses DNS header bytes into decoded fields (`id`, flags, section counts). |
 | `method_udpburst` | `0x400f60` | One concrete flood method implementation reachable from command parser. |
 
-For less technical readers: these are the key “jobs” inside the bot. Together they explain command intake, trust control, attack execution, and persistence behavior.
+For less technical readers: these are the key "jobs" inside the bot. Together they explain command intake, trust control, attack execution, and persistence behavior.
 
 ## Why the DNS decode subroutine matters
 
 The routine identified as `__decode_header` parses a DNS wire header into decoded fields (`id`, `flags`, `qdcount`, `ancount`, etc.).
 
-That routine itself is not a unique “family signature” in isolation. It is significant because:
+That routine itself is not a unique "family signature" in isolation. It is significant because:
 
 - it sits in the resolver path used by `__dns_lookup`,
 - it shapes response validation behavior,
@@ -426,8 +425,56 @@ rule MIRAI_LIKE_STAGE1_Family_Heuristic
 }
 ```
 
-## Closing Notes
+## MITRE ATT&CK Mapping
 
-This is Part I (Stage1). The core behavior is clear and reproducible: trust-gated C2 command intake, explicit method dispatch, and continuous anti-competition hardening.
+| Technique ID | Name | Evidence in Sample |
+| --- | --- | --- |
+| T1071.001 | Application Layer Protocol: Web Protocols | C2 communication over TCP to hardcoded IP; SIP and SSDP protocol templates in `.rodata` |
+| T1573 | Encrypted Channel | Trust-gate verification of C2 peer IP before accepting commands (`verify_server_ip`) |
+| T1059.004 | Command and Scripting Interpreter: Unix Shell | Command dispatch loop in `main` parses server-sent tokens and routes to handlers |
+| T1489 | Service Stop | `scan_and_kill` walks `/proc` and terminates competing processes |
+| T1562.001 | Impair Defenses: Disable or Modify Tools | `disable_infection_tools` removes `wget`, `curl`, `tftp`, `ftp`, `scp`, `nc`, `netcat`, `ncat`, `busybox` |
+| T1498.001 | Network Denial of Service: Direct Network Flood | Seven DDoS methods: UDP, SYN, ACK, UDP-slam, junk, RakNet, UDP-burst |
+| T1018 | Remote System Discovery | `__dns_lookup` builds and sends UDP DNS queries to resolve target hosts |
+| T1106 | Native API | Direct use of Linux syscalls for socket, connect, process enumeration via `/proc` |
+| T1036 | Masquerading | Loader string `1337SoraLOADER` references the Sora variant family name |
 
-Part II should focus on richer runtime-backed behavior profiling and broader clustering across additional Mirai-like samples.
+## IOC Appendix
+
+### File Hashes (SHA-256)
+
+| Sample | SHA-256 |
+| --- | --- |
+| Stage1 primary | `d40cf9c95dcedf4f19e4a5f5bb744c8e98af87eb5703c850e6fda3b613668c28` |
+| Stage1 variant | `094e9d6ee057d38f40c35f018488e35ab6ccd006ed261b17322e78fd5ea2c0cb` |
+
+### C2 Infrastructure
+
+| Indicator | Type | Context |
+| --- | --- | --- |
+| `144[.]172[.]108[.]230` | IPv4 | Hardcoded C2 server IP and download host |
+
+### Network Indicators
+
+| Indicator | Type | Context |
+| --- | --- | --- |
+| `http://144[.]172[.]108[.]230/bins/mynode.x86_64` | URL | Sample acquisition/distribution path |
+| `M-SEARCH * HTTP/1.1` | Payload template | SSDP reflection flood template in `.rodata` |
+| `Via: SIP/2.0/UDP 192.168.1.1:5060` | Payload template | SIP flood template in `.rodata` |
+
+### Notable Strings
+
+| String | Context |
+| --- | --- |
+| `!SIGKILL` | Control token parsed by command dispatcher |
+| `!hello` | Control token parsed by command dispatcher |
+| `1337SoraLOADER` | Loader/variant identity string |
+| `KHserverHACKER` | Present in variant `094e...` |
+
+## Conclusion
+
+This Stage1 bot follows a clear Mirai-lineage architecture: it connects to a single hardcoded C2 IP, verifies the peer before accepting any instructions, and then enters a command-dispatch loop that routes server-sent tokens to seven distinct DDoS flood methods (UDP, SYN, ACK, UDP-slam, junk, RakNet, and UDP-burst). In parallel, a dedicated killer thread continuously removes common transfer utilities and terminates competing processes through `/proc` enumeration, ensuring the bot maintains exclusive control of the infected device.
+
+Cross-variant validation against a second sample (`094e...`) confirmed that the core resolver, flood-family markers, and anti-competition patterns persist across builds, even when named symbols shift. The family-level YARA rule catches both variants while the high-fidelity rules pin each individually. Comparison with the Fortinet Gayfemboy campaign showed shared Mirai-lineage traits but not enough overlap to assert same-cluster attribution.
+
+All findings are reproducible through the published scripts, IDA annotators, and notebook. Part II will extend this work with runtime behavior profiling and broader variant clustering.

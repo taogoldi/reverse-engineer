@@ -1,26 +1,23 @@
 ---
-layout: post
 title: "From log.dll To A Decrypted Chrysalis Main Module"
 date: 2026-02-21 00:00:00 +0000
 permalink: /blog/chrysalis-offline-unpacking/
-toc: true
+description: "End-to-end offline unpacking of the Lotus Blossom Chrysalis backdoor chain — from DLL sideloading through shellcode extraction, region decryption, and RC4 config recovery — without a live Windows debugger."
 categories: [malware-reversing, threat-intel]
 tags: [chrysalis, lotus-blossom, unpacking, emulation, malware-analysis]
-image:
-  path: /assets/images/quantum-analysis-futuristic-v2.png
-  alt: "Futuristic malware reverse-engineering visualization"
+image: /assets/images/quantum-analysis-futuristic-v2.png
 ---
 
-This write-up documents an end-to-end offline workflow for unpacking the Lotus Blossom “Chrysalis” chain described by Rapid7 (Feb 2026), without running the malware in a Windows debugger.
+This sample caught my attention because it looked like a perfect candidate for a question I keep coming back to: how far can you get with offline, reproducible unpacking before you ever need a live debugger? The Lotus Blossom "Chrysalis" chain that Rapid7 described in February 2026 has multiple layered stages, exception-driven control flow, and a reflective implant — exactly the kind of thing that usually forces analysts into fragile, one-off debugging sessions. I wanted to see if I could turn the whole thing into a deterministic pipeline that another analyst could rerun on a different machine and still recover the same bytes, hashes, and reversing pivots.
 
-The goal was to produce a workflow another analyst could rerun on a different machine and still recover the same bytes, hashes, and reversing pivots. Instead of relying on a fragile live-debugger session, this approach treats each stage as a measurable checkpoint and keeps outputs evidence-centered.
+The goal was evidence-centered outputs at every checkpoint. Instead of relying on "it ran in my debugger," each stage produces artifacts with verifiable hashes and structured diffs that are ready for peer review or handoff.
 
 ## Summary and Attribution
 
 This project started as a practical engineering exercise: can we turn a strong threat-intel write-up into a reproducible unpacking pipeline with auditable outputs? Rapid7 already established the family behavior and high-level chain, so the work here focused on implementation discipline, verification, and handoff quality for other reverse engineers.
 
 Primary upstream research and malware-family analysis credit goes to Rapid7:
-- [The Chrysalis Backdoor: A Deep Dive into Lotus Blossom’s toolkit (Rapid7)](https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/)
+- [The Chrysalis Backdoor: A Deep Dive into Lotus Blossom's toolkit (Rapid7)](https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/)
 
 This post focuses on reproducibility and analyst workflow:
 - deterministic offline extraction on macOS/Linux
@@ -41,7 +38,7 @@ If you are newer to malware analysis, these terms help decode the rest of this a
 - **PE file**: The standard Windows executable format (`.exe`, `.dll`).
 - **Hash (SHA-256)**: A content fingerprint used to verify files are exactly the same.
 - **RVA/VA**: Addressing terms used in reversing. RVA is an offset inside a module; VA is the absolute runtime address.
-- **Diff report**: A comparison of “before vs after” bytes/code, used to prove exactly what changed.
+- **Diff report**: A comparison of "before vs after" bytes/code, used to prove exactly what changed.
 
 If you only want the high-level story, read: `Execution Chain` -> `Why Emulation` -> `Step 1/2/3` -> `Conclusion`. The deeper IDA/assembly sections are there for specialist validation.
 
@@ -103,13 +100,13 @@ The output set is designed around common reverse-engineering handoff needs: one 
 
 By the end of this workflow you will have:
 - A dumped stage1 buffer (`shellcode.bin`) and the full stage1 executable region (`shellcode_full.bin`).
-- A decrypted “main module”:
+- A decrypted "main module":
   - as a patched container on disk (`main_module_patched.exe`)
   - and optionally as a clean in-memory image (`main_module_mem.bin`)
 - A decrypted configuration blob (`config_decrypted.bin`) with the C2 and other fields Rapid7 described.
 
 And importantly:
-- A repeatable pipeline that does not rely on “it ran in my debugger”.
+- A repeatable pipeline that does not rely on "it ran in my debugger".
 
 ## Artifacts
 
@@ -134,8 +131,8 @@ This is the short operational story behind the unpacking work: sideloaded loader
    - `LogWrite`: resolves APIs via hashing, performs loader-side runtime shellcode decryption (Rapid7 describes this as a custom path with LCG-related constants), marks memory executable, and jumps to shellcode with a 25-dword argument structure ([Rapid7](https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/)).
 2. The decrypted blob (stage1) is not a PE. It is a loader-like shellcode that:
    - Decrypts the next module layer using the `"gQ2JR&9;"` add/xor/sub transform over 5 regions, as reported by Rapid7 ([Rapid7](https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/)).
-   - Resolves APIs again and transfers execution to the “main module”.
-3. The main module behaves like a reflective PE-like implant (“Chrysalis”), performs CRT init, then executes its main logic.
+   - Resolves APIs again and transfers execution to the "main module".
+3. The main module behaves like a reflective PE-like implant ("Chrysalis"), performs CRT init, then executes its main logic.
 4. The implant decrypts configuration data stored in the `BluetoothService` blob using RC4.
 
 ## Why Emulation (And What Not To Emulate)
@@ -147,19 +144,19 @@ In plain terms: we used emulation as a controlled extraction tool, not as a perf
 The first stage (`log.dll`) is a good fit for emulation:
 - It is normal PE code.
 - It calls a predictable set of WinAPI functions (heap + virtual memory).
-- We can stub the APIs well enough to reach the “decrypted buffer is ready” breakpoint.
+- We can stub the APIs well enough to reach the "decrypted buffer is ready" breakpoint.
 
 Stage1 execution is much less friendly:
 - It uses exception-driven control flow and odd instructions (port I/O, segment ops, `retf`, etc.).
-- A naïve emulator tends to crash or spin in anti-emulation loops.
+- A naive emulator tends to crash or spin in anti-emulation loops.
 
-Instead of forcing stage1 to “run” perfectly, we use emulation only to **extract the decrypted bytes** and then apply the remaining transforms offline.
+Instead of forcing stage1 to "run" perfectly, we use emulation only to **extract the decrypted bytes** and then apply the remaining transforms offline.
 
-## SEH/VEH And “Debugger Problems” (How We Handled Them)
+## SEH/VEH And "Debugger Problems" (How We Handled Them)
 
 Early attempts that treated exceptions as regular crashes produced misleading dead ends. Reframing those faults as intentional control-flow mechanics changed the strategy from "make everything execute" to "capture stable state at the right boundary and continue offline."
 
-Stage1’s behavior is consistent with SEH/VEH-driven loaders: code that intentionally faults and expects an exception handler to redirect execution. In a normal Windows debug session, those exceptions become “control flow”. In a basic emulator, they become crashes or infinite loops.
+Stage1's behavior is consistent with SEH/VEH-driven loaders: code that intentionally faults and expects an exception handler to redirect execution. In a normal Windows debug session, those exceptions become "control flow". In a basic emulator, they become crashes or infinite loops.
 
 What these terms mean:
 - **SEH (Structured Exception Handling)**: Windows' built-in, stack-based exception system. When code hits an error (for example invalid memory access), execution can be redirected to a registered handler instead of just terminating.
@@ -178,13 +175,13 @@ We did **not** implement a full Windows SEH/VEH dispatcher in Unicorn.
 What we did instead:
 - **Avoided** needing stage1 to execute correctly by dumping its decrypted bytes at the `log.dll` breakpoint and continuing offline.
 - Added a few **surgical mitigations** to keep emulation from failing too early during `log.dll`/handoff work:
-  - map the NULL page and plant a minimal `MZ`/`PE\\0\\0` structure (prevents common “base==0” PE-header reads from faulting),
+  - map the NULL page and plant a minimal `MZ`/`PE\0\0` structure (prevents common "base==0" PE-header reads from faulting),
   - Capstone-assisted decoding for diagnostics and targeted register fixups in specific patterns,
-  - optional “skip lists” for a small set of stage1 junk instructions when experimenting (port I/O, segment ops, etc.).
+  - optional "skip lists" for a small set of stage1 junk instructions when experimenting (port I/O, segment ops, etc.).
 
-The key takeaway: we didn’t “beat” VEH by perfectly emulating it; we **sidestepped** it by extracting bytes at stable boundaries and applying the remaining transforms offline.
+The key takeaway: we didn't "beat" VEH by perfectly emulating it; we **sidestepped** it by extracting bytes at stable boundaries and applying the remaining transforms offline.
 
-<img src="{{ '/assets/images/asm/asm_F_seh_48A890.png' | absolute_url }}" alt="SEH prologue at 0x48A890 showing exception registration setup" loading="lazy" style="max-width:100%;height:auto;" />
+![SEH prologue at 0x48A890 showing exception registration setup](/assets/images/asm/asm_F_seh_48A890.png)
 *SEH prologue evidence at `0x48A890` showing handler registration (`fs:[0]`) and guard-frame setup before protected logic.*
 
 ## Tooling Overview
@@ -197,13 +194,13 @@ We built a small toolkit:
   - Minimal API stubs (`HeapAlloc/Free/ReAlloc/Size`, `VirtualAlloc/Protect`, etc.).
   - Dumps stage1 bytes at the decryption breakpoint.
 - `offline_extract_stage2.py`:
-  - Applies Rapid7’s `"gQ2JR&9;"` per-byte transform over the 5 regions described by the stage1 argument struct ([Rapid7](https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/)).
+  - Applies Rapid7's `"gQ2JR&9;"` per-byte transform over the 5 regions described by the stage1 argument struct ([Rapid7](https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/)).
   - Can output a patched PE on disk or a reconstructed memory image.
 - `decrypt_btservice_config.py`:
   - RC4-decrypts the config at offset `0x30808` size `0x980` with key `qwhvb^435h&*7` ([Rapid7](https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/)).
 - `api_hash_rainbow.py` (Windows):
   - Builds a rainbow table for the **loader/log.dll API hashing** described by Rapid7.
-  - This is useful when reversing `log.dll` (and similar loader components) because it maps a 32-bit “API hash” back to a likely `(dll, export)` pair.
+  - This is useful when reversing `log.dll` (and similar loader components) because it maps a 32-bit "API hash" back to a likely `(dll, export)` pair.
   - Note: Rapid7 also describes a separate, more complex API hashing routine in the decrypted main module; that would be a different tool/implementation.
 - `ida_chrysalis_api_hash_resolver.py`:
   - Standalone IDAPython automation for `log.dll`.
@@ -228,7 +225,7 @@ We map `log.dll` at its expected image base (`0x10000000`, sample-specific) and 
 - `RVA 0x1C11` (VA `0x10001C11`, sample-specific)
 
 At the breakpoint, `EAX` points to the decrypted stage1 buffer. We dump:
-- The “reported” stage1 length (201,096 bytes / `0x31188` in this sample)
+- The "reported" stage1 length (201,096 bytes / `0x31188` in this sample)
 - The full 2MB region (`0x200000` in this sample, sample-specific) that the malware marks executable via `VirtualProtect`
 
 Outputs:
@@ -236,7 +233,7 @@ Outputs:
 - `shellcode_full.bin` (stage1 full region)
 
 Why the full 2MB dump matters:
-- The stage1 code references data past the initial “payload length”.
+- The stage1 code references data past the initial "payload length".
 - Later offline extraction becomes easier when we keep the whole protected region.
 
 This decision came from debugging pain: "minimal" dumps looked valid but later failed in secondary transforms because required data tails were missing. Capturing the entire protected region removed that ambiguity.
@@ -246,12 +243,12 @@ This decision came from debugging pain: "minimal" dumps looked valid but later f
 At this point we want the following to be true:
 - Our `input/` hashes match Rapid7 (so we know we are working on the same sample family).
 - The emulator hits the breakpoint (`0x10001C11`) and prints `EAX=...` pointing into a mapped buffer.
-- For the sample matching Rapid7’s published hashes/indicators, the observed reported length at the breakpoint was `0x31188`.
+- For the sample matching Rapid7's published hashes/indicators, the observed reported length at the breakpoint was `0x31188`.
 - In this sample, `shellcode_full.bin` length is `0x200000`.
 
 If these do not hold, stop and fix stage0 first (bad input file, wrong image base, missing stub, etc.).
 
-## Step 2: Offline Main-Module Decryption (“gQ2JR&9;”)
+## Step 2: Offline Main-Module Decryption ("gQ2JR&9;")
 
 Step 2 converts a dynamic reversing problem into a deterministic byte transform problem. Once we have stable stage1 outputs and argument metadata, we can reconstruct the next stage without depending on fragile runtime control flow.
 
@@ -282,7 +279,7 @@ In our sample (sample-specific), the region list is:
 - Total modified bytes: `0x2E800`
 
 We implement an offline decryptor that can:
-- Patch a PE on disk (`BluetoothService.exe`) in-place to produce a “decrypted” container (`main_module_patched.exe`)
+- Patch a PE on disk (`BluetoothService.exe`) in-place to produce a "decrypted" container (`main_module_patched.exe`)
 - Build a decrypted in-memory image (`main_module_mem.bin`)
 
 The patched PE is a reconstruction/analysis artifact for reversing and diffing, not a claim about the exact on-disk payload dropped during runtime.
@@ -290,10 +287,10 @@ The patched PE is a reconstruction/analysis artifact for reversing and diffing, 
 Producing both artifacts is intentional: file-backed tools and memory-oriented reversing tools answer different questions, and analysts usually need both views during triage.
 
 Important note about signatures:
-- VirusTotal will report the patched PE as “signed” + “invalid signature”.
-- That’s expected: the container was signed, and we modified it.
+- VirusTotal will report the patched PE as "signed" + "invalid signature".
+- That's expected: the container was signed, and we modified it.
 
-### Why A “Patched PE” Is Still Useful
+### Why A "Patched PE" Is Still Useful
 
 Even though `main_module_patched.exe` remains the Bitdefender container, it is a practical bridge artifact:
 - You can point standard PE tooling at it (imports, entrypoint, sections).
@@ -302,7 +299,7 @@ Even though `main_module_patched.exe` remains the Bitdefender container, it is a
 
 For deeper reversing, the cleaner artifact is the reconstructed memory image (`main_module_mem.bin`), because it avoids file-offset vs RVA confusion when the malware expects an in-memory view.
 
-## Step 3: RC4 Config Decryption (Matches Rapid7’s reported offset/size/key for this sample)
+## Step 3: RC4 Config Decryption (Matches Rapid7's reported offset/size/key for this sample)
 
 Config extraction is sequenced after module recovery so the offset/size interpretation can be validated against the same staged context. Doing it in this order reduces the risk of treating copied indicators as independently discovered facts.
 
@@ -316,10 +313,10 @@ We decrypt it offline and confirm plaintext fields match:
 - module name `BluetoothService`
 - Chrome user-agent string
 
-<img src="{{ '/assets/images/asm/asm_I_rc4_config_decrypt_output_v2.png' | absolute_url }}" alt="RC4 config decryption script and decrypted output evidence" loading="lazy" style="max-width:100%;height:auto;" />
+![RC4 config decryption script and decrypted output evidence](/assets/images/asm/asm_I_rc4_config_decrypt_output_v2.png)
 *RC4 decryption proof: KSA/PRGA routine, `0x30808`/`0x980` extraction, matching decrypted SHA-256, and plaintext config preview including C2 path/UA context.*
 
-## Validating The “Main Module” Looks Real
+## Validating The "Main Module" Looks Real
 
 Validation here is about avoiding false positives. A blob can decrypt and still be structurally wrong; checking imports, entrypoint shape, and CRT-like startup behavior gives confidence that we recovered executable logic and not partial noise.
 
@@ -328,7 +325,7 @@ Once the decrypted bytes are in place, the PE behaves like a normal x86 user-mod
 - Import directory is populated (kernel32/user32/advapi32/ole32/wininet/etc)
 - The entrypoint resembles MSVC CRT scaffolding
 
-This is consistent with Rapid7’s statement that the module “executes the MSVC CRT initialization sequence” before transferring control to main.
+This is consistent with Rapid7's statement that the module "executes the MSVC CRT initialization sequence" before transferring control to main.
 
 ## Loader API Hashing (What `api_hash_rainbow.py` Models)
 
@@ -341,14 +338,14 @@ Rapid7 describes `log.dll` as resolving APIs via a hashing subroutine instead of
    - followed by a **MurmurHash-style avalanche finalizer**
 3. Applies a **salted comparison** against a hardcoded target hash.
 
-Why a “rainbow table” helps:
-- Once you know a target 32-bit hash value, you can brute-force which common WinAPI export name likely produced it (across `C:\\Windows\\System32\\*.dll`).
-- This converts “opaque numbers in disassembly” back into recognizable APIs like `VirtualProtect`, `GetProcAddress`, etc.
+Why a "rainbow table" helps:
+- Once you know a target 32-bit hash value, you can brute-force which common WinAPI export name likely produced it (across `C:\Windows\System32\*.dll`).
+- This converts "opaque numbers in disassembly" back into recognizable APIs like `VirtualProtect`, `GetProcAddress`, etc.
 
 Practical caveats:
-- The exact salting and name normalization (e.g., case folding) can vary by sample. That’s why `api_hash_rainbow.py` exposes knobs:
+- The exact salting and name normalization (e.g., case folding) can vary by sample. That's why `api_hash_rainbow.py` exposes knobs:
   - export-name case (`asis/lower/upper`)
-  - salt operation (`xor/add/sub`) and whether it’s applied pre/post finalizer
+  - salt operation (`xor/add/sub`) and whether it's applied pre/post finalizer
   - whether the avalanche finalizer is enabled
 
 Main-module hashing is different:
@@ -364,7 +361,7 @@ Two practical IDA workflows were automated:
 1. Loader hash resolution in `log.dll` (`ida_chrysalis_api_hash_resolver.py`)
 - Input:
   - `log.dll` opened in IDA
-  - Windows export directories (`C:\\Windows\\SysWOW64;C:\\Windows\\System32`)
+  - Windows export directories (`C:\Windows\SysWOW64;C:\Windows\System32`)
   - resolver EA (`0x100014E0` in this sample, sample-specific)
   - seed (`0x114DDB33` in this sample, sample-specific)
 - Output:
@@ -414,7 +411,7 @@ Two practical IDA workflows were automated:
 - Output:
   - hash constants converted to readable comments/enums at matched sites
 - Result:
-  - quick cleanup of “opaque constant” surfaces in both disassembly and pseudocode.
+  - quick cleanup of "opaque constant" surfaces in both disassembly and pseudocode.
 
 6. LogWrite/decrypt decompiler reconstruction (`ida_rebuild_logwrite.py`)
 - Input:
@@ -440,11 +437,11 @@ These are the common failure modes we hit while iterating:
 
 1. Emulation crashes early with reads from `0x0000003C` or other low addresses.
 Fix:
-- Map the NULL page and place a minimal DOS+PE signature there (so “base==0” reads don’t fault immediately).
+- Map the NULL page and place a minimal DOS+PE signature there (so "base==0" reads don't fault immediately).
 
 2. Breakpoint not reached / control flow returns to `0x41414141`.
 Explanation:
-- That “fake RET” is a guardrail: the emulator used a sentinel return address so we can stop cleanly when the DLL returns.
+- That "fake RET" is a guardrail: the emulator used a sentinel return address so we can stop cleanly when the DLL returns.
 Fix:
 - Ensure you are running the correct `--mode` (`logwrite`), and that stubs are returning to the correct call sites.
 
@@ -452,9 +449,9 @@ Fix:
 Explanation:
 - Stage1 is intentionally hostile to simplistic emulation (exception-driven control flow and junk opcodes).
 Fix:
-- Don’t brute force stage1 execution. Dump bytes and do the offline transforms instead (this is the core design of this workflow).
+- Don't brute force stage1 execution. Dump bytes and do the offline transforms instead (this is the core design of this workflow).
 
-4. VirusTotal says the patched PE is “invalid-signature”.
+4. VirusTotal says the patched PE is "invalid-signature".
 Explanation:
 - Authenticode signature verification fails after any byte modifications.
 Fix:
@@ -488,7 +485,7 @@ Why this matters:
 - This is the exact boundary where stage0 is still tractable and stage1 begins.
 - It justifies extracting bytes at the breakpoint instead of emulating full stage1 behavior.
 
-<img src="{{ '/assets/images/asm/asm_A_logwrite_handoff.png' | absolute_url }}" alt="log.dll LogWrite handoff boundary with decrypt, VirtualProtect, and stage1 arg-struct setup" loading="lazy" style="max-width:100%;height:auto;" />
+![log.dll LogWrite handoff boundary with decrypt, VirtualProtect, and stage1 arg-struct setup](/assets/images/asm/asm_A_logwrite_handoff.png)
 *`log.dll!LogWrite` handoff boundary: decryption call, RWX transition, and stage1 argument-structure initialization before control transfer.*
 
 ### B) Stage1 Region Byte-Transform Core (`gQ2JR&9;`)
@@ -511,7 +508,7 @@ Why this matters:
 - It ties the reversing claim directly to the implemented transform in `offline_extract_stage2.py`.
 - It reflects the later stage1-to-main-module transform phase, not the earlier `log.dll!LogWrite` runtime shellcode decrypt boundary.
 
-<img src="{{ '/assets/images/asm/asm_C_mw_decrypt_core.png' | absolute_url }}" alt="mw_decrypt core key schedule and rolling byte transform pseudocode" loading="lazy" style="max-width:100%;height:auto;" />
+![mw_decrypt core key schedule and rolling byte transform pseudocode](/assets/images/asm/asm_C_mw_decrypt_core.png)
 *Stage1 region-transform core and key schedule logic used by the offline extractor implementation.*
 
 
@@ -560,7 +557,7 @@ Why this matters:
 - It visually explains why the rainbow table and IDA enum/comment automation add immediate value.
 - It helps readers connect opaque constants to concrete API behavior.
 
-<img src="{{ '/assets/images/asm/asm_B_api_hash_resolver.png' | absolute_url }}" alt="mw_apihashing resolver pseudocode from log.dll" loading="lazy" style="max-width:100%;height:auto;" />
+![mw_apihashing resolver pseudocode from log.dll](/assets/images/asm/asm_B_api_hash_resolver.png)
 *`mw_apihashing` resolver internals used to map 32-bit API hash constants to exported function names.*
 
 
@@ -582,7 +579,7 @@ Why this matters:
 - It shows the exact point where decrypted bytes become executable.
 - It is one of the clearest "stage boundary" markers in this chain.
 
-<img src="{{ '/assets/images/asm/asm_E_hash_callsite_logwrite.png' | absolute_url }}" alt="VirtualProtect transition and stage1 argument-block construction in LogWrite" loading="lazy" style="max-width:100%;height:auto;" />
+![VirtualProtect transition and stage1 argument-block construction in LogWrite](/assets/images/asm/asm_E_hash_callsite_logwrite.png)
 *Callsite view showing `APIHASH_47C204CA` resolution, `VirtualProtect(..., 0x200000, 0x40, ...)`, and immediate writes into the stage1 argument block.*
 
 ### G) RC4 Routine Shape (KSA/PRGA Fingerprint)
@@ -654,24 +651,9 @@ See `README.md` for the exact command lines and expected outputs.
 
 When reproducing, run from a clean workspace and save terminal logs with timestamps. If outputs diverge, compare hashes stage-by-stage rather than jumping directly to final artifacts; this is faster for isolating the first failing boundary.
 
-## What’s Next (If You Want Runtime Behavior)
-
-At this point the workflow has already delivered most high-value static outcomes. The next decision is cost versus fidelity: deeper emulation is slower but self-contained, while VM detonation is higher fidelity but operationally heavier.
-
-At this point you have:
-- A decrypted PE-like module you can reverse statically.
-- A decrypted config blob you can parse.
-
-If you want to observe C2 protocol behavior safely, you still shouldn’t “run it for real” on your host. Options:
-- Continue expanding the Unicorn stubs and emulate deeper (time-consuming).
-- Use a Windows VM and detonate in an isolated sandbox (more faithful).
-- Use targeted static lifting/decompilation for specific routines (best ROI for this sample family).
-
-For most reverse engineering goals (IOCs, API usage, config extraction, control-flow understanding), the offline artifacts are already enough.
-
 ## Genetics Matching (Patching Analysis)
 
-This section summarizes patch “genetics”: which code regions changed, and how baseline instructions align against patched instructions in focused side-by-side slices. The goal is to provide visual evidence of transformation patterns without dumping full function listings inline.
+This section summarizes patch "genetics": which code regions changed, and how baseline instructions align against patched instructions in focused side-by-side slices. The goal is to provide visual evidence of transformation patterns without dumping full function listings inline.
 
 Function matching and SQLite diff alignment in this section were produced with [Diaphora](https://github.com/joxeankoret/diaphora). Credit to Joxean Koret and the Diaphora project for the diffing framework used in this workflow.
 
@@ -679,7 +661,7 @@ Function matching and SQLite diff alignment in this section were produced with [
 
 The map below compresses all modified file-offset ranges from `patched_diff.json` into one timeline.
 
-<img src="{{ '/assets/images/patching/patch_range_map.svg' | absolute_url }}" alt="Patch range map from patched_diff.json" loading="lazy" style="max-width:100%;height:auto;" />
+![Patch range map from patched_diff.json](/assets/images/patching/patch_range_map.svg)
 
 ### Side-By-Side Diff Slices (Focused)
 
@@ -687,29 +669,29 @@ These are compact slices extracted from `asm_side_by_side_*.csv` outputs (genera
 
 Target file: `main_module_patched.exe` | Patch-range entry anchor offset: `0x00401000` | Evidence image: `asm_H_patch_range_401000.png`
 
-<img src="{{ '/assets/images/asm/asm_H_patch_range_401000.png' | absolute_url }}" alt="Patched-range disassembly anchor around loc_401000" loading="lazy" style="max-width:100%;height:auto;" />
+![Patched-range disassembly anchor around loc_401000](/assets/images/asm/asm_H_patch_range_401000.png)
 *Disassembly anchor near `loc_401000`, used here as the first low-level entry point before the focused side-by-side slices.*
 
 Target file: `main_module_patched.exe` | Patched subroutine offset: `0x0043CD83` | Diff slice file: `asm_side_by_side_0x0043CD83.csv`
 Match status: **Unmatched at line level** (`same_line=True`: `0/2632` rows in `asm_side_by_side_0x0043CD83.csv`).
 
-<img src="{{ '/assets/images/patching/patch_snippet_0043CD83.svg' | absolute_url }}" alt="Side-by-side diff snippet 0x0043CD83" loading="lazy" style="max-width:100%;height:auto;" />
+![Side-by-side diff snippet 0x0043CD83](/assets/images/patching/patch_snippet_0043CD83.svg)
 
 Target file: `main_module_patched.exe` | Patched subroutine offset: `0x0043CD83` | Evidence image: `asm_G_patch_43CD83.png`
 Match status: **Unmatched at line level** (`same_line=True`: `0/2632` rows in `asm_side_by_side_0x0043CD83.csv`).
 
-<img src="{{ '/assets/images/asm/asm_G_patch_43CD83.png' | absolute_url }}" alt="Direct disassembly view around 0x43CD83" loading="lazy" style="max-width:100%;height:auto;" />
+![Direct disassembly view around 0x43CD83](/assets/images/asm/asm_G_patch_43CD83.png)
 *Direct IDA disassembly around `0x43CD83`, aligned with the focused side-by-side genetics slice above.*
 
 Target file: `main_module_patched.exe` | Patched subroutine offset: `0x004863A0` | Diff slice file: `asm_side_by_side_0x004863A0.csv`
 Match status: **Unmatched at line level** (`same_line=True`: `0/9452` rows in `asm_side_by_side_0x004863A0.csv`).
 
-<img src="{{ '/assets/images/patching/patch_snippet_004863A0.svg' | absolute_url }}" alt="Side-by-side diff snippet 0x004863A0" loading="lazy" style="max-width:100%;height:auto;" />
+![Side-by-side diff snippet 0x004863A0](/assets/images/patching/patch_snippet_004863A0.svg)
 
 Target file: `main_module_patched.exe` | Patched subroutine offset: `0x0048A890` | Diff slice file: `asm_side_by_side_0x0048A890.csv`
 Match status: **Unmatched at line level** (`same_line=True`: `0/3599` rows in `asm_side_by_side_0x0048A890.csv`).
 
-<img src="{{ '/assets/images/patching/patch_snippet_0048A890.svg' | absolute_url }}" alt="Side-by-side diff snippet 0x0048A890" loading="lazy" style="max-width:100%;height:auto;" />
+![Side-by-side diff snippet 0x0048A890](/assets/images/patching/patch_snippet_0048A890.svg)
 
 ### Partial-Match Candidates (Function-Level)
 
@@ -733,9 +715,78 @@ Full raw diff sources used for these visuals:
 - [`patched_diff.txt`](https://raw.githubusercontent.com/taogoldi/analysis_data/main/chrysalis_feb_2026/reports/binary_diff/patched_diff.txt)
 - [`patched_diff.json`](https://raw.githubusercontent.com/taogoldi/analysis_data/main/chrysalis_feb_2026/reports/binary_diff/patched_diff.json)
 
+## What's Next (If You Want Runtime Behavior)
+
+At this point the workflow has already delivered most high-value static outcomes. The next decision is cost versus fidelity: deeper emulation is slower but self-contained, while VM detonation is higher fidelity but operationally heavier.
+
+At this point you have:
+- A decrypted PE-like module you can reverse statically.
+- A decrypted config blob you can parse.
+
+If you want to observe C2 protocol behavior safely, you still shouldn't "run it for real" on your host. Options:
+- Continue expanding the Unicorn stubs and emulate deeper (time-consuming).
+- Use a Windows VM and detonate in an isolated sandbox (more faithful).
+- Use targeted static lifting/decompilation for specific routines (best ROI for this sample family).
+
+For most reverse engineering goals (IOCs, API usage, config extraction, control-flow understanding), the offline artifacts are already enough.
+
+## IOC Appendix
+
+The following indicators of compromise are extracted from the analysis artifacts described in this report. All values are sample-specific unless otherwise noted.
+
+### File Hashes
+
+| File | SHA-256 |
+|---|---|
+| `log.dll` (malicious sideloaded DLL) | `3bdc4c0637591533f1d4198a72a33426c01f69bd2e15ceee547866f65e26b7ad` |
+| `BluetoothService.exe` (sideload container) | `2da00de67720f5f13b17e9d985fe70f10f153da60c9ab1086fe58f069a156924` |
+| `BluetoothService` / `encrypted_shellcode.bin` (encrypted blob) | `77bfea78def679aa1117f569a35e8fd1542df21f7e00e27f192c907e61d63a2e` |
+| `shellcode.bin` (stage1 dump) | `4416729d92e22ccb93e26c6896efe056b851a914727969f0ff604da4ef18ccfa` |
+| `shellcode_full.bin` (full stage1 region) | `83f17d256d010ebfec8d58c4217f54a73d8237aa51ebab75c3e50f111d883d49` |
+| `main_module_patched.exe` (decrypted module) | `bd0fb50084a21876fdbcf33fc7cf1949b78020f9e169086b2dd0b6aae28ad359` |
+| `main_module_mem.bin` (memory image) | `129a91eaa5e03b112ecfccd858b8c7fc4f482158a53d8300f2505d7c120f87d3` |
+| `config_decrypted.bin` (decrypted config) | `aad018195c5ee6c2e3c00bc3c95313cb4301218534765472124ebc7b5fb7bcb1` |
+
+### Network IOCs
+
+| Indicator | Type | Context |
+|---|---|---|
+| `api.skycloudcenter.com` | C2 Domain | Extracted from decrypted RC4 config blob |
+| `https://api.skycloudcenter.com/a/chat/s/{GUID}` | C2 URL Pattern | Full C2 callback path from config |
+
+### Host-Based IOCs
+
+| Indicator | Type | Context |
+|---|---|---|
+| `log.dll` | Sideloaded DLL filename | Loaded by `BluetoothService.exe` via DLL sideloading |
+| `BluetoothService.exe` | Sideload host process | Renamed Bitdefender Submission Wizard used as loader container |
+| `BluetoothService` | Encrypted payload blob | Companion file read by `LogInit` export at runtime |
+| `LogInit` / `LogWrite` | DLL export names | Exports called by the sideload host to trigger loader and decrypt stages |
+| RC4 key `qwhvb^435h&*7` | Cryptographic key | Used for config decryption at offset `0x30808`, size `0x980` (sample-specific) |
+| XOR key `gQ2JR&9;` | Cryptographic key | Used for region byte-transform across 5 PE sections (sample-specific) |
+| Chrome user-agent string | Config field | Present in decrypted config blob; used for C2 communication |
+
+## MITRE ATT&CK Mapping
+
+The following techniques are derived from behaviors described in this analysis. Technique IDs map to the [MITRE ATT&CK](https://attack.mitre.org/) framework.
+
+| Technique ID | Technique Name | Stage | Evidence in This Analysis |
+|---|---|---|---|
+| T1574.002 | Hijack Execution Flow: DLL Side-Loading | Stage 0 | `BluetoothService.exe` (renamed Bitdefender binary) sideloads `log.dll` from the same directory |
+| T1059.006 | Command and Scripting Interpreter: Python | -- | *(Not observed in malware; used only by analysis tooling)* |
+| T1027 | Obfuscated Files or Information | Stage 0-1 | Encrypted shellcode blob (`BluetoothService`), loader-side runtime decrypt in `LogWrite`, region byte-transform with `gQ2JR&9;` key |
+| T1140 | Deobfuscate/Decode Files or Information | Stage 1-2 | Multi-stage decryption: LCG-related shellcode decrypt, add/xor/sub region transform, RC4 config decrypt |
+| T1620 | Reflective Code Loading | Stage 1-2 | Stage1 shellcode resolves APIs and reflectively loads decrypted main module without standard PE loader |
+| T1106 | Native API | Stage 0-1 | Dynamic API resolution via FNV-1a + MurmurHash hashing in `log.dll`; PEB-walking hash resolver in main module |
+| T1055.012 | Process Injection: Process Hollowing | Stage 0-1 | `VirtualProtect` marks 2MB region as `PAGE_EXECUTE_READWRITE` before stage1 handoff (memory permission manipulation for code execution) |
+| T1497.001 | Virtualization/Sandbox Evasion: System Checks | Stage 1 | Exception-driven control flow (SEH/VEH), junk opcodes (`in`, `out`, `retf`), and anti-emulation patterns in stage1 |
+| T1573.001 | Encrypted Channel: Symmetric Cryptography | Config | RC4-encrypted C2 configuration with sample-specific key; C2 URL pattern uses HTTPS |
+| T1071.001 | Application Layer Protocol: Web Protocols | Config | C2 callback to `https://api.skycloudcenter.com/a/chat/s/{GUID}` with Chrome user-agent string |
+| T1036.005 | Masquerading: Match Legitimate Name or Location | Stage 0 | Loader uses `BluetoothService.exe` (legitimate Bitdefender binary) and generic filenames (`log.dll`, `BluetoothService`) to blend with normal software |
+
 ## Conclusion
 
-This project shows that the Chrysalis chain can be unpacked and validated in a reproducible way without fully executing malware in a live Windows debugger. The core strategy was to keep dynamic work narrow (only the stable loader handoff), then convert the rest of the chain into explicit offline transforms with verifiable outputs.
+This project demonstrates that the Chrysalis backdoor chain can be fully unpacked and validated through a reproducible offline workflow -- no live Windows debugger required. The core strategy was deliberate: keep dynamic work narrow (only the stable `LogWrite` loader handoff where emulation is tractable), then convert every subsequent stage into explicit offline transforms with verifiable, hash-anchored outputs.
 
 What this report establishes:
 - Input-sample identity was verified through SHA-256 hashes aligned with the Rapid7-described cluster.
@@ -748,6 +799,8 @@ What this workflow does not claim:
 - It does not emulate full runtime behavior of all post-handoff stages.
 - It does not replace controlled detonation for network/protocol behavior or timing-dependent actions.
 - It does not assume every future variant reuses identical offsets, seeds, or transform metadata.
+
+The broader significance here is methodological. Lotus Blossom is an established APT group, and Chrysalis represents a non-trivial multi-stage implant with layered encryption, exception-driven anti-analysis, and reflective loading. Showing that even this level of complexity can be reduced to a scriptable, auditable pipeline lowers the barrier for other analysts working on similar families. The same checkpoint-and-transform approach generalizes: identify the stable handoff boundary, extract deterministic bytes there, and push everything else into offline scripts that produce diffable artifacts.
 
 If you adapt this method to a new sample, keep this order:
 1. Verify sample identity first (hashes and packaging context).

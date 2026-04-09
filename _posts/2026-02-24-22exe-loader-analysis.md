@@ -1,9 +1,8 @@
 ---
-layout: post
 title: "Stage1 (22.exe) Loader Reversing, Part I: Stage Decryption, Evasion, and Attribution"
 permalink: /blog/22exe-loader-analysis/
 date: 2026-02-24 00:00:00 +0000
-toc: true
+description: "Reverse engineering a staged loader that patches AMSI and ETW, decrypts an AES-256-CBC payload in memory, and hands off to a Vidar-like credential stealer."
 categories: [malware-reversing, threat-intel]
 tags: [loader, amsi-bypass, etw-patch, aes, stage2, yara, attribution, vidar]
 image:
@@ -11,9 +10,9 @@ image:
   alt: "Stage1 22.exe loader reverse-engineering analysis"
 ---
 
-**Sample acquisition source:** `hXXps://cloudaxis[.]cc/gsmft/yueu/fkvqld/tvqqwh/ushu/22.exe`
+A binary called `22.exe` arrived from a delivery URL on `cloudaxis[.]cc`, wrapped in enough layers to suggest the author wanted to buy time before anyone looked inside. What followed was a fairly deliberate kill chain: silence the telemetry, decrypt a second-stage PE from an embedded blob, and reflectively load it without ever touching disk. This post walks through each of those steps -- the evasion patches, the AES decryption internals, the anti-sandbox gating -- and lays out the evidence that ties Stage2 to the Vidar stealer family. Part I stays on Stage1; Part II will pick up with the Stage2 config and C2 behavior.
 
-In this post, I break down what `22.exe` (treated as **Stage1** here) is doing, how I safely extracted Stage2, where the anti-analysis logic shows up, and where attribution still doesn't have enough proof yet.
+**Sample acquisition source:** `hXXps://cloudaxis[.]cc/gsmft/yueu/fkvqld/tvqqwh/ushu/22.exe`
 
 ## Summary
 
@@ -185,8 +184,8 @@ Reference links used for this check:
 
 ### Notebook
 
-- `notebooks/spectralviper_deobfuscation_walkthrough.ipynb`
-- The `spectralviper` label in these filenames is an internal working name for this dataset/cluster, not a finalized malware-family attribution.
+- `notebooks/vidar_22exe_deobfuscation_walkthrough.ipynb`
+  - Previously named with a `spectralviper_` prefix. That label was an internal working name for this dataset/cluster during early triage and does not reflect a malware-family attribution. The notebook has been renamed to match the Vidar-like classification used throughout this analysis.
 - What it does:
   - lays out the stage flow and constants,
   - extracts and decrypts Stage2,
@@ -211,11 +210,11 @@ Why this matters: it gives you one repeatable path from raw sample to evidence a
 - `scripts/hunt_stage2_xor_mozilla.py`
   - reproduces THOR-style XORed `Mozilla/5.0` detection with per-hit offsets/keys.
   - outputs `stage2_xor_mozilla_report.json`.
-- `scripts/assess_spectralviper_similarity.py`
+- `scripts/assess_vidar_similarity.py`
   - compares behavioral/string overlap against expected marker sets.
-  - outputs `spectralviper_similarity_report.json`.
+  - outputs `vidar_similarity_report.json`.
 - `scripts/sv_analysis_lib.py`
-  - shared parsing/decrypt/util functions used across the other scripts and notebook.
+  - shared parsing/decrypt/util functions used across the other scripts and notebook. The `sv_` prefix is a legacy artifact from the original internal working name.
 
 ## IDA Python Helpers
 
@@ -454,6 +453,77 @@ rule VIDAR_LIKE_22_STAGE2_Variant_Heuristic
 }
 ```
 
-## Part II
+## MITRE ATT&CK Mapping
 
-Part II will focus on the Stage2 analysis breakdown: config decode workflow, command/dispatcher mapping, and validated network behavior.
+| Technique ID | Technique Name | Observed Behavior |
+| --- | --- | --- |
+| T1027 | Obfuscated Files or Information | Stage2 PE encrypted with AES-256-CBC inside Stage1 resource blob |
+| T1140 | Deobfuscate/Decode Files or Information | Runtime AES decryption of embedded blob with PKCS#7 unpadding |
+| T1620 | Reflective Code Loading | Decrypted Stage2 PE loaded directly from memory without disk write |
+| T1562.001 | Impair Defenses: Disable or Modify Tools | AMSI patch (`AmsiScanBuffer`, `AmsiOpenSession`) returns error code to bypass scanning |
+| T1562.006 | Impair Defenses: Indicator Blocking | ETW patch (`EtwEventWrite`, `EtwEventWriteTransfer`, `NtTraceEvent`) suppresses telemetry events |
+| T1497.001 | Virtualization/Sandbox Evasion: System Checks | Checks for Cuckoo pipes, Sandboxie DLL, Wine registry keys, analysis tool process names |
+| T1555.003 | Credentials from Password Stores: Credentials from Web Browsers | Stage2 strings reference `ChromeBuildTools`, `\\Network\\Cookies`, browser credential paths |
+| T1082 | System Information Discovery | Stage2 imports `GetCurrentHwProfileA`, `EnumDisplayDevicesA` for host profiling |
+
+## IOC Appendix
+
+### File Hashes (SHA-256)
+
+| Artifact | SHA-256 |
+| --- | --- |
+| `22.exe` (Stage1) | `0cb5a2e3c8aa7c80c8bbfb3a5f737c75807aa0e689dd4ad0a0466d113d8a6b9d` |
+| `stage2_dec_unpadded.bin` (Decrypted Stage2) | `5fa52aa9046334c86da1e9746dfe9d7bb23ec69a8b2ab77d98efd2cb1af012f3` |
+
+### Network IOCs
+
+| Type | Value | Context |
+| --- | --- | --- |
+| URL | `hXXps://cloudaxis[.]cc/gsmft/yueu/fkvqld/tvqqwh/ushu/22.exe` | Stage1 delivery URL |
+
+### Registry Keys
+
+| Key | Context |
+| --- | --- |
+| `SOFTWARE\Wine` | Anti-analysis: Wine environment check |
+| `SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Sandboxie` | Anti-analysis: Sandboxie detection |
+
+### File / Pipe Paths
+
+| Path | Context |
+| --- | --- |
+| `\\.\pipe\cuckoo` | Anti-analysis: Cuckoo sandbox named pipe |
+| `cuckoomon.dll` | Anti-analysis: Cuckoo monitor DLL |
+| `SbieDll.dll` | Anti-analysis: Sandboxie injection DLL |
+
+### Process Names (Anti-Analysis Markers)
+
+| Process / String | Context |
+| --- | --- |
+| `ProcessHacker.exe` | Analysis tool detection |
+| `injector.exe` | Analysis tool detection |
+| `joe sandbox` / `SANDBOX` / `maltest` | User/host environment string checks |
+
+### Stage1 Patch Byte Signatures
+
+| Target | Bytes | Instruction Semantics |
+| --- | --- | --- |
+| AMSI (`AmsiScanBuffer`) | `B8 57 00 07 80 C3` | `mov eax, 0x80070057 ; ret` |
+| ETW (primary) | `31 C0 C3` | `xor eax, eax ; ret` |
+| ETW (fallback) | `C2 14 00` | `ret 0x14` |
+
+### Stage2 XOR-Encoded Strings
+
+| Offset | XOR Key | Decoded Value |
+| --- | --- | --- |
+| `0x410` | `0x33` | `Mozilla/5.0` |
+| `0x22F1` | `0xD5` | `Mozilla/5.0` |
+| `0x2331` | `0x63` | `Mozilla/5.0` |
+
+## Conclusion
+
+Stage1 (`22.exe`) follows a well-structured loader pattern: neutralize AMSI and ETW telemetry through targeted in-memory patches, run a battery of anti-sandbox and anti-analysis checks, then decrypt an AES-256-CBC encrypted Stage2 PE from an embedded blob and reflectively load it -- all without writing the payload to disk. The evasion work is not novel in isolation, but the combination of dual-target patching (both content scanning and event tracing), multi-tool sandbox detection, and crypto-backed stage separation puts this above a commodity dropper in terms of operational investment.
+
+Stage2 static analysis shows strong indicators of credential and browser data collection -- Chrome tooling strings, cookie paths, download tokens, and host-profiling imports -- consistent with the Vidar stealer family. The XOR-encoded `Mozilla/5.0` user-agent strings, confirmed independently by the upstream `gen_xor_hunting.yar` rule, further support that classification. Attribution remains at medium confidence pending full Stage2 config extraction and C2 validation, which Part II will address.
+
+Four YARA rules (two high-fidelity, two heuristic) are published and validated against both stages. The accompanying scripts and notebook provide a reproducible path from the raw sample through decryption to IOC extraction, suitable for integration into broader hunting workflows.

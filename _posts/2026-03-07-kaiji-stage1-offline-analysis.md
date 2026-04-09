@@ -4,21 +4,26 @@ permalink: /blog/kaiji-stage1-offline-analysis/
 date: 2026-03-07 00:00:00 +0000
 categories: [malware-reversing, threat-intel]
 tags: [kaiji, ares, linux-malware, elf, botnet, static-analysis, yara, ida-pro]
-image: /assets/images/social/kaiji-stage1-card.png
+image:
+  path: /assets/images/social/kaiji-stage1-card.png
 description: "Offline static analysis of a Kaiji-like Linux ELF sample: persistence, decoded C2 token, Ares module mapping, and reproducible analyst artifacts."
 ---
 
-This post documents a reproducible static workflow for one Linux ELF sample (`linux_amd64`, SHA-256 `0a70d7699c8e0629597dcc03b1aef0beebec03ae0580f2c070fb2bfd2fd89a71`) downloaded from:
+A single Go-compiled ELF binary, fetched from an open directory on a bullet-proof host, turned out to pack systemd service hijacking, cron-based re-entry, an obfuscated C2 beacon token, and an entire suite of DDoS attack modules lifted from the Ares framework. This post walks through a fully offline, reproducible static analysis of that sample -- no sandbox, no live C2 -- showing exactly how each capability was extracted, annotated, and mapped to detection logic.
 
-- `hxxp://144[.]172[.]108[.]230/bins/mynode.x86_64`
+## Concepts
 
-Scope: persistence behavior, embedded C2-like token extraction, attack-module mapping, and reusable tooling. No live C2 interaction is used in this phase.
+- **Kaiji** -- A Linux botnet family, first documented in 2020, that targets SSH brute-forced hosts. Written in Go, it is notable for compiling to a single statically linked ELF binary that handles persistence, C2 communication, and DDoS attack dispatch without external dependencies.
+- **Ares modules** -- A set of named attack functions (`Ares_Tcp`, `Ares_L3_Udp`, `Ares_ipspoof`, etc.) embedded in Kaiji-lineage samples. Each module implements a distinct flooding or disruption technique and is dispatched by the bot's command handler.
+- **Go ELF binaries** -- Executables compiled from Go source code into Linux ELF format. Go binaries retain rich symbol metadata (package paths, function names, source file references) even when stripped, making them particularly amenable to static analysis and family clustering.
 
 ## Sample Scope
 
 | Artifact | SHA-256 |
 | --- | --- |
 | `linux_amd64` | `0a70d7699c8e0629597dcc03b1aef0beebec03ae0580f2c070fb2bfd2fd89a71` |
+
+Download source: `hxxp://144[.]172[.]108[.]230/bins/mynode.x86_64`
 
 ## Downloads
 
@@ -201,12 +206,54 @@ rule Linux_KaijiLike_AresModuleSet_0a70 {
 }
 ```
 
-## Confidence and limits
+## MITRE ATT&CK Mapping
 
-Current assessment: Kaiji-like/Ares-like Linux bot component, high confidence for persistence behavior and attack-module intent based on static artifacts.
+| Technique ID | Name | Evidence in Sample |
+| --- | --- | --- |
+| T1053.003 | Scheduled Task/Job: Cron | `echo "*/1 * * * * root /.mod " >> /etc/crontab` |
+| T1543.002 | Create or Modify System Process: Systemd Service | Drops `quotaoff.service` with `ExecStart=/boot/System.mod` |
+| T1036.005 | Masquerading: Match Legitimate Name or Location | Paths mimic system utilities (`quotaoff.service`, `/usr/sbin/ifconfig.cfg`) |
+| T1132.001 | Data Encoding: Standard Encoding | C2 token embedded as Base64 string |
+| T1071 | Application Layer Protocol | Decoded C2 beacon to `air.xem.lat:25194` |
+| T1498 | Network Denial of Service | Ares flood modules (`Ares_Tcp`, `Ares_L3_Udp`, `Ares_ipspoof`) |
+| T1496 | Resource Hijacking | `main.Killcpu` function for CPU exhaustion |
 
-Not claimed in this write-up:
+## IOC Appendix
 
-- live C2 protocol validation
-- runtime command execution telemetry
-- execution-side environmental branching
+### File Hashes
+
+| File | SHA-256 |
+| --- | --- |
+| `linux_amd64` (`mynode.x86_64`) | `0a70d7699c8e0629597dcc03b1aef0beebec03ae0580f2c070fb2bfd2fd89a71` |
+
+### Network Indicators
+
+| Indicator | Context |
+| --- | --- |
+| `hxxp://144[.]172[.]108[.]230/bins/mynode.x86_64` | Download source |
+| `air.xem.lat:25194` | Decoded C2 token (embedded Base64) |
+| `air.duffy.baby:888` | Pivot IOC (analyst-supplied validation context) |
+
+### Persistence Paths
+
+| Path | Purpose |
+| --- | --- |
+| `/usr/lib/systemd/system/quotaoff.service` | Masqueraded systemd unit |
+| `/boot/System.mod` | Service binary (ExecStart/ExecReload/ExecStop) |
+| `/etc/crontab` | Cron persistence target (minute-interval re-entry) |
+| `/.mod` | Cron-executed payload path |
+| `/usr/sbin/ifconfig.cfg` | Dropped masquerade path |
+
+### Embedded Token
+
+| Encoded | Decoded |
+| --- | --- |
+| `YWlyLnhlbS5sYXQ6MjUxOTR8KG9kaykvKi0=` | `air.xem.lat:25194\|(odk)/*-` |
+
+## Conclusion
+
+Static analysis of this sample establishes it as a Kaiji-lineage Linux bot with high confidence. The binary combines two independent persistence mechanisms -- a masqueraded systemd service (`quotaoff.service`) and minute-interval cron re-entry -- with an embedded, Base64-encoded C2 beacon token pointing to `air.xem.lat:25194`. Its attack surface is defined by an Ares-derived module set covering TCP flooding, UDP layer-3 flooding, IP spoofing, and CPU exhaustion, all recoverable from retained Go symbol metadata.
+
+Every artifact referenced in this post -- IDA annotations, YARA rules, extraction scripts, and the analysis notebook -- is available in the linked repository for independent reproduction.
+
+Caveats remain: this analysis is purely static. Live C2 protocol validation, runtime command execution telemetry, and execution-side environmental branching have not been confirmed. A follow-up dynamic analysis phase would be needed to close those gaps.
