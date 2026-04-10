@@ -309,7 +309,7 @@ Rapid7 describes the config location ([Rapid7](https://www.rapid7.com/blog/post/
 - RC4 key `qwhvb^435h&*7` (sample-specific / variant-dependent)
 
 We decrypt it offline and confirm plaintext fields match:
-- `https://api.skycloudcenter.com/a/chat/s/{GUID}`
+- `https://api[.]skycloudcenter[.]com/a/chat/s/{GUID}`
 - module name `BluetoothService`
 - Chrome user-agent string
 
@@ -751,8 +751,8 @@ The following indicators of compromise are extracted from the analysis artifacts
 
 | Indicator | Type | Context |
 |---|---|---|
-| `api.skycloudcenter.com` | C2 Domain | Extracted from decrypted RC4 config blob |
-| `https://api.skycloudcenter.com/a/chat/s/{GUID}` | C2 URL Pattern | Full C2 callback path from config |
+| `api[.]skycloudcenter[.]com` | C2 Domain | Extracted from decrypted RC4 config blob |
+| `https://api[.]skycloudcenter[.]com/a/chat/s/{GUID}` | C2 URL Pattern | Full C2 callback path from config |
 
 ### Host-Based IOCs
 
@@ -781,7 +781,7 @@ The following techniques are derived from behaviors described in this analysis. 
 | T1055.012 | Process Injection: Process Hollowing | Stage 0-1 | `VirtualProtect` marks 2MB region as `PAGE_EXECUTE_READWRITE` before stage1 handoff (memory permission manipulation for code execution) |
 | T1497.001 | Virtualization/Sandbox Evasion: System Checks | Stage 1 | Exception-driven control flow (SEH/VEH), junk opcodes (`in`, `out`, `retf`), and anti-emulation patterns in stage1 |
 | T1573.001 | Encrypted Channel: Symmetric Cryptography | Config | RC4-encrypted C2 configuration with sample-specific key; C2 URL pattern uses HTTPS |
-| T1071.001 | Application Layer Protocol: Web Protocols | Config | C2 callback to `https://api.skycloudcenter.com/a/chat/s/{GUID}` with Chrome user-agent string |
+| T1071.001 | Application Layer Protocol: Web Protocols | Config | C2 callback to `https://api[.]skycloudcenter[.]com/a/chat/s/{GUID}` with Chrome user-agent string |
 | T1036.005 | Masquerading: Match Legitimate Name or Location | Stage 0 | Loader uses `BluetoothService.exe` (legitimate Bitdefender binary) and generic filenames (`log.dll`, `BluetoothService`) to blend with normal software |
 
 ## Conclusion

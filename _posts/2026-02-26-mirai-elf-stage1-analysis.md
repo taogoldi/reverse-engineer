@@ -74,7 +74,7 @@ YARA validation now covers both files:
 
 ### 1) Connects and verifies who it is talking to
 
-The sample contains a hardcoded server IP string at `0x41498a`: `144.172.108.230`.
+The sample contains a hardcoded server IP string at `0x41498a`: `144[.]172[.]108[.]230`.
 
 `main` establishes a connection, then calls `verify_server_ip`. If the connected peer IP does not match the hardcoded value, the command path is rejected.
 

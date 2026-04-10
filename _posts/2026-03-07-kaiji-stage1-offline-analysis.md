@@ -69,11 +69,11 @@ Embedded Base64 token:
 
 Decoded token:
 
-- `air.xem.lat:25194|(odk)/*-`
+- `air[.]xem[.]lat:25194|(odk)/*-`
 
 Analyst-supplied IOC context for pivoting during validation:
 
-- `air.duffy.baby:888`
+- `air[.]duffy[.]baby:888`
 
 ![Base64 decode callsite](/assets/images/posts/kaiji/asm_kaiji_b64_c2_xref.png)
 
@@ -214,7 +214,7 @@ rule Linux_KaijiLike_AresModuleSet_0a70 {
 | T1543.002 | Create or Modify System Process: Systemd Service | Drops `quotaoff.service` with `ExecStart=/boot/System.mod` |
 | T1036.005 | Masquerading: Match Legitimate Name or Location | Paths mimic system utilities (`quotaoff.service`, `/usr/sbin/ifconfig.cfg`) |
 | T1132.001 | Data Encoding: Standard Encoding | C2 token embedded as Base64 string |
-| T1071 | Application Layer Protocol | Decoded C2 beacon to `air.xem.lat:25194` |
+| T1071 | Application Layer Protocol | Decoded C2 beacon to `air[.]xem[.]lat:25194` |
 | T1498 | Network Denial of Service | Ares flood modules (`Ares_Tcp`, `Ares_L3_Udp`, `Ares_ipspoof`) |
 | T1496 | Resource Hijacking | `main.Killcpu` function for CPU exhaustion |
 
@@ -231,8 +231,8 @@ rule Linux_KaijiLike_AresModuleSet_0a70 {
 | Indicator | Context |
 | --- | --- |
 | `hxxp://144[.]172[.]108[.]230/bins/mynode.x86_64` | Download source |
-| `air.xem.lat:25194` | Decoded C2 token (embedded Base64) |
-| `air.duffy.baby:888` | Pivot IOC (analyst-supplied validation context) |
+| `air[.]xem[.]lat:25194` | Decoded C2 token (embedded Base64) |
+| `air[.]duffy[.]baby:888` | Pivot IOC (analyst-supplied validation context) |
 
 ### Persistence Paths
 
@@ -248,11 +248,11 @@ rule Linux_KaijiLike_AresModuleSet_0a70 {
 
 | Encoded | Decoded |
 | --- | --- |
-| `YWlyLnhlbS5sYXQ6MjUxOTR8KG9kaykvKi0=` | `air.xem.lat:25194\|(odk)/*-` |
+| `YWlyLnhlbS5sYXQ6MjUxOTR8KG9kaykvKi0=` | `air[.]xem[.]lat:25194\|(odk)/*-` |
 
 ## Conclusion
 
-Static analysis of this sample establishes it as a Kaiji-lineage Linux bot with high confidence. The binary combines two independent persistence mechanisms -- a masqueraded systemd service (`quotaoff.service`) and minute-interval cron re-entry -- with an embedded, Base64-encoded C2 beacon token pointing to `air.xem.lat:25194`. Its attack surface is defined by an Ares-derived module set covering TCP flooding, UDP layer-3 flooding, IP spoofing, and CPU exhaustion, all recoverable from retained Go symbol metadata.
+Static analysis of this sample establishes it as a Kaiji-lineage Linux bot with high confidence. The binary combines two independent persistence mechanisms -- a masqueraded systemd service (`quotaoff.service`) and minute-interval cron re-entry -- with an embedded, Base64-encoded C2 beacon token pointing to `air[.]xem[.]lat:25194`. Its attack surface is defined by an Ares-derived module set covering TCP flooding, UDP layer-3 flooding, IP spoofing, and CPU exhaustion, all recoverable from retained Go symbol metadata.
 
 Every artifact referenced in this post -- IDA annotations, YARA rules, extraction scripts, and the analysis notebook -- is available in the linked repository for independent reproduction.
 

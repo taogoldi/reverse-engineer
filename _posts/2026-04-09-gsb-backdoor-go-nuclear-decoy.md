@@ -16,7 +16,7 @@ Mixed in with the usual Go runtime noise were type names I had never seen in a m
 
 It was the latter.
 
-Buried under the reactor math, I found `syscall.LoadLibrary`, `syscall.GetProcAddress`, `syscall.SyscallN`, and a `VirtualAlloc` call requesting `PAGE_EXECUTE_READWRITE` memory. The function names weren't in English — they were randomized Chinese characters. The build path pointed to a framework called `Factory-v3`. And the binary was signed with a valid Authenticode certificate from `www.glass.com`.
+Buried under the reactor math, I found `syscall.LoadLibrary`, `syscall.GetProcAddress`, `syscall.SyscallN`, and a `VirtualAlloc` call requesting `PAGE_EXECUTE_READWRITE` memory. The function names weren't in English — they were randomized Chinese characters. The build path pointed to a framework called `Factory-v3`. And the binary was signed with a valid Authenticode certificate from `www[.]glass[.]com`.
 
 This post documents the full teardown: how I mapped the obfuscation layers, identified the malicious functions hiding inside reactor simulation code, traced the kill chain back to a GCleaner Pay-Per-Install distribution network, and extracted the C2 configuration. At the time of analysis, only 12 out of 76 VirusTotal engines detected this sample.
 
@@ -34,7 +34,7 @@ This post documents the full teardown: how I mapped the obfuscation layers, iden
 | **Language** | Go 1.24.5 |
 | **Sections** | 8 (including `.symtab` — Go symbol table) |
 | **Overlay** | 2,176 bytes — Authenticode signature |
-| **Certificate** | Valid, issued to `www.glass.com` (Country Unknown) |
+| **Certificate** | Valid, issued to `www[.]glass[.]com` (Country Unknown) |
 | **Timestamp** | 0 (zeroed — deliberately stripped) |
 | **Build Path** | `Factory-v3/builder/temp/7061c16a7a05b72f2cf8d5e57bdcc1d0/main.go` |
 | **Compiled** | ~2026-04-06 (first seen date) |
@@ -58,7 +58,7 @@ Victim machine (pre-compromised)
     → GCleaner PPI stub executes
     → Downloads 072533c1...exe from C2
     → Drops and executes the Go backdoor
-    → Backdoor connects to 72.61.25.108:6789/tcp
+    → Backdoor connects to 72[.]61[.]25[.]108:6789/tcp
 ```
 
 This means the Gsb backdoor operator is likely **distinct** from the GCleaner operator — they're a customer of the PPI service. MalwareBazaar tagged this sample as "SmokeLoader," but that appears to be a misclassification — SmokeLoader is traditionally a Delphi/C++ loader, not a Go binary.
@@ -69,7 +69,7 @@ This means the Gsb backdoor operator is likely **distinct** from the GCleaner op
 
 Before diving into the reversing, it's worth understanding why only 15.8% of AV engines flagged this. The evasion isn't based on packing or encryption — it's structural:
 
-1. **Valid Authenticode signature** — the binary is signed by `www.glass.com` with a valid certificate chain. Many AV engines and EDR products apply reduced scrutiny to signed binaries.
+1. **Valid Authenticode signature** — the binary is signed by `www[.]glass[.]com` with a valid certificate chain. Many AV engines and EDR products apply reduced scrutiny to signed binaries.
 
 2. **Go binary structure** — Go compiles to statically linked, monolithic executables with thousands of standard library functions embedded. The malicious code is a tiny fraction of the binary, drowned out by legitimate Go runtime.
 
@@ -304,7 +304,7 @@ However, [threat.rip's automated dynamic analysis](https://www.threat.rip/file/0
 
 | Field | Value |
 |---|---|
-| **C2 Host** | `72.61.25.108` |
+| **C2 Host** | `72[.]61[.]25[.]108` |
 | **C2 Port** | `6789` |
 | **Protocol** | TCP (raw) |
 | **ASN** | AS-HOSTINGER |
@@ -335,14 +335,14 @@ The framework likely provides:
 - A builder GUI or CLI that generates customized Go implant source code
 - Nuclear reactor type name generation as the obfuscation layer
 - CJK function name randomization (garble-style)
-- Embedded Authenticode signing with the `www.glass.com` certificate
+- Embedded Authenticode signing with the `www[.]glass[.]com` certificate
 - Per-build encryption key for the C2 configuration
 
 ---
 
 ## The Authenticode Certificate
 
-The binary carries a valid Authenticode signature issued to `www.glass.com`. This is significant because:
+The binary carries a valid Authenticode signature issued to `www[.]glass[.]com`. This is significant because:
 
 1. **It passes Windows SmartScreen** — unsigned binaries trigger warnings; signed ones don't
 2. **It bypasses some AV heuristics** — several engines reduce alerting on signed PE files
@@ -358,7 +358,7 @@ The signing happens at the builder level (the `Factory-v3` framework applies it)
 
 | Type | Value | Context |
 |---|---|---|
-| IP | `72.61.25.108` | C2 server |
+| IP | `72[.]61[.]25[.]108` | C2 server |
 | Port | `6789/tcp` | C2 port (raw TCP) |
 | ASN | AS-HOSTINGER | C2 hosting |
 
@@ -367,7 +367,7 @@ The signing happens at the builder level (the `Factory-v3` framework applies it)
 | Type | Value | Context |
 |---|---|---|
 | Build Path | `Factory-v3/builder/temp/` | Builder framework artifact in binary |
-| Certificate | `www.glass.com` | Authenticode signer |
+| Certificate | `www[.]glass[.]com` | Authenticode signer |
 | Go Build ID | `vIOXNUGrDWmi7-CT--qK/YkkHv7Jla5AY52C3CNL_/KDTloTCYQHuKnv65BC_L/FSZG-podQva36lp5t6_6` | Unique per-build identifier |
 | RWX Allocation | `VirtualAlloc(NULL, size, 0x3000, 0x40)` | Shellcode staging |
 
@@ -388,7 +388,7 @@ The signing happens at the builder level (the `Factory-v3` framework applies it)
 | T1106 | Native API | Direct syscall via `SyscallN` bypassing API hooks |
 | T1129 | Shared Modules | Runtime `LoadLibrary` + `GetProcAddress` |
 | T1140 | Deobfuscate/Decode | `main.牛肉古代桥` runtime string decryption |
-| T1553.002 | Subvert Trust Controls: Code Signing | Valid Authenticode cert from `www.glass.com` |
+| T1553.002 | Subvert Trust Controls: Code Signing | Valid Authenticode cert from `www[.]glass[.]com` |
 | T1587.001 | Develop Capabilities: Malware | Factory-v3 custom builder framework |
 
 ---
@@ -418,8 +418,8 @@ alert tcp $HOME_NET any -> $EXTERNAL_NET 6789 (
 
 ```
 alert tls $HOME_NET any -> $EXTERNAL_NET any (
-    msg:"MALWARE Gsb backdoor - www.glass.com signed binary";
-    tls.cert_subject; content:"www.glass.com";
+    msg:"MALWARE Gsb backdoor - www[.]glass[.]com signed binary";
+    tls.cert_subject; content:"www[.]glass[.]com";
     sid:2026044; rev:1;
 )
 ```
@@ -452,7 +452,7 @@ This sample represents a step up in Go malware craftsmanship from what I usually
 
 The nuclear reactor simulation isn't cosmetic — it's functional code that executes real math, making behavioral analysis harder. The CJK function names break signature engines that expect ASCII patterns. And the dynamic API resolution via `LoadLibrary`/`GetProcAddress` into `SyscallN` bypasses the usermode API hooks that most EDR products rely on.
 
-But the operator made mistakes. The `-trimpath` flag didn't fully strip the `Factory-v3` module path. The `.symtab` section was left intact, exposing all CJK function names. And the Authenticode certificate from `www.glass.com` is a pivotable indicator — any other binary signed by this cert is almost certainly from the same operation.
+But the operator made mistakes. The `-trimpath` flag didn't fully strip the `Factory-v3` module path. The `.symtab` section was left intact, exposing all CJK function names. And the Authenticode certificate from `www[.]glass[.]com` is a pivotable indicator — any other binary signed by this cert is almost certainly from the same operation.
 
 For defenders: the nuclear type names (`BeamEnvelope`, `ControlDrum`, `FuelRodBundle`, `XenonTransientTable`) are highly specific and unlikely to appear in legitimate software outside of actual nuclear engineering tools. A YARA rule matching 5+ of these names in a Go PE binary is a high-fidelity detection with near-zero false positives.
 
@@ -465,7 +465,7 @@ The GCleaner distribution chain means this backdoor is being sold as a service �
 | Source | URL | Finding |
 |---|---|---|
 | threat.rip | [File Report](https://www.threat.rip/file/072533c1d31d83b056a1a9f4174a23763c53597df1c89ad9c545df2c3bb35f5e) | Backdoor.Win64.Gsb, score 100/100, C2 config extracted |
-| threat.rip | [MalConfig](https://www.threat.rip/file/072533c1d31d83b056a1a9f4174a23763c53597df1c89ad9c545df2c3bb35f5e/config) | C2: `72.61.25.108:6789/tcp` (AS-HOSTINGER) |
+| threat.rip | [MalConfig](https://www.threat.rip/file/072533c1d31d83b056a1a9f4174a23763c53597df1c89ad9c545df2c3bb35f5e/config) | C2: `72[.]61[.]25[.]108:6789/tcp` (AS-HOSTINGER) |
 | Loader Insight Agency | [Payload View](https://loaderinsight.agency/?p=payload_view&hash=072533c1d31d83b056a1a9f4174a23763c53597df1c89ad9c545df2c3bb35f5e) | Distributed by GCleaner, 5 delivery tasks |
 | MalwareBazaar | [Sample](https://bazaar.abuse.ch/sample/072533c1d31d83b056a1a9f4174a23763c53597df1c89ad9c545df2c3bb35f5e) | Tagged `dropped-by-GCleaner`, reporter: Bitsight |
 
