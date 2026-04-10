@@ -126,7 +126,23 @@ The actual function names are randomized Chinese character sequences — a techn
 | `0x4740e0` | `main.资产酒吧协助` | Asset Bar Assist | **`SyscallN` + `LazyProc.Find`** — direct syscalls |
 | `0x4747c0` | `main.讨价还价黄铜道歉` | Bargain Brass Apology | **Largest function (3,973 bytes)** — payload builder |
 
-The Chinese characters form grammatically nonsensical phrases — "Beef Ancient Bridge," "Bargain Brass Apology" — which is the hallmark of garble's random word selection from a CJK dictionary. The names survive in the `.symtab` section because the developer didn't strip symbols, probably to avoid breaking Go's runtime reflection.
+The Chinese characters form grammatically nonsensical phrases — "Beef Ancient Bridge," "Bargain Brass Apology" — which is the hallmark of garble-style random word selection from a dictionary.
+
+An important caveat for attribution: the CJK function names don't indicate a Chinese-speaking developer. Scanning the full binary for non-ASCII characters reveals a **multilingual** distribution:
+
+| Script | Character Count |
+|---|---|
+| Cyrillic (Russian) | 1,326 |
+| Arabic | 1,294 |
+| CJK (Chinese) | 1,237 |
+| Hangul (Korean) | 189 |
+| Hiragana (Japanese) | 3 |
+
+Cyrillic and Arabic characters actually outnumber the CJK characters — they appear in other obfuscated identifiers (struct fields, type data, inner variable names) that aren't as visible as the top-level function names. There are no Chinese locale markers (`zh-CN`, `GBK`, etc.) anywhere in the binary, and no standard garble version string.
+
+This multilingual mixing is a deliberate obfuscation choice by the Factory-v3 builder: it breaks ASCII-based signature tools, complicates text-based searching, and — most importantly — serves as a **false flag for attribution**. An analyst who only sees the CJK function names in IDA might wrongly conclude this is a Chinese operation. The Cyrillic and Arabic presence tells a different story: the builder's word dictionary intentionally mixes scripts to muddy origin analysis.
+
+The names survive in the `.symtab` section because the developer didn't strip symbols, probably to avoid breaking Go's runtime reflection and stack traces.
 
 ---
 
