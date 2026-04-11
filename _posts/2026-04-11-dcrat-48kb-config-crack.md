@@ -6,16 +6,16 @@ categories: [malware-reversing, threat-intel]
 tags: [dcrat, dark-crystal-rat, dotnet, aes, pbkdf2, plugin-loader, amsi-bypass, yara, static-analysis, config-extraction]
 image:
   path: /assets/images/social/dcrat-analysis-2026.jpg
-description: "Reversing a 48KB DcRAT stub — cracking AES-256 encrypted config via PBKDF2 key derivation, mapping the fileless plugin architecture, and documenting why a minimal loader with zero offensive code scores 100/100 on CAPA."
+description: "Reversing a 48KB DcRAT stub, cracking AES-256 encrypted config via PBKDF2 key derivation, mapping the fileless plugin architecture, and documenting why a minimal loader with zero offensive code scores 100/100 on CAPA."
 ---
 
 Forty-eight kilobytes. That's less than a favicon. This .NET binary sat at the bottom of my triage queue with a CAPA score of 100/100 and a tag that said ".NET RAT indicators: encrypted_c2." I almost passed it over for a larger, flashier sample. Then I decompiled it and found something that reframed how I think about RAT analysis.
 
-The binary has no keylogger. No file manager. No reverse shell. No screen capture. No browser stealer. No clipboard monitor. None of the capabilities that CAPA scored 100/100 for are actually implemented in the stub — they're all delivered as **plugin DLLs after the initial C2 connection**, cached in the Windows registry as binary blobs, and loaded reflectively into the same process without ever touching disk.
+The binary has no keylogger. No file manager. No reverse shell. No screen capture. No browser stealer. No clipboard monitor. None of the capabilities that CAPA scored 100/100 for are actually implemented in the stub, they're all delivered as **plugin DLLs after the initial C2 connection**, cached in the Windows registry as binary blobs, and loaded reflectively into the same process without ever touching disk.
 
 The stub's only job is to survive, persist, and load whatever the operator sends it. All 48 kilobytes are dedicated to exactly that: encrypted config, TLS socket, AMSI bypass, anti-VM check, process killer, BSOD protection, and a plugin loader. The malware IS the loader. Everything else is ephemeral.
 
-This is [DcRAT](https://malpedia.caad.fkie.fraunhofer.de/details/win.dcrat) (Dark Crystal RAT) — a Malware-as-a-Service RAT that's been active since 2018 and saw a [massive surge in 2025](https://securelist.com/new-wave-of-attacks-with-dcrat-backdoor-distributed-by-maas/115850/) with 57+ new C2 domains. This post documents the full reversing: cracking the AES-256 encrypted config, extracting the C2 address, mapping the plugin architecture, and explaining why a binary with zero offensive code gets the maximum threat score.
+This is [DcRAT](https://malpedia.caad.fkie.fraunhofer.de/details/win.dcrat) (Dark Crystal RAT), a Malware-as-a-Service RAT that's been active since 2018 and saw a [massive surge in 2025](https://securelist.com/new-wave-of-attacks-with-dcrat-backdoor-distributed-by-maas/115850/) with 57+ new C2 domains. This post documents the full reversing: cracking the AES-256 encrypted config, extracting the C2 address, mapping the plugin architecture, and explaining why a binary with zero offensive code gets the maximum threat score.
 
 ---
 
@@ -27,7 +27,7 @@ This is [DcRAT](https://malpedia.caad.fkie.fraunhofer.de/details/win.dcrat) (Dar
 | **MD5** | (extracted from report) |
 | **Size** | 48,640 bytes (47.5 KB) |
 | **Format** | PE32 .NET assembly (x86, .NET Framework 4.0) |
-| **Entropy** | `.text` section: 5.64 (normal — not packed) |
+| **Entropy** | `.text` section: 5.64 (normal, not packed) |
 | **CAPA** | 100/100, RED ALERT |
 | **Version** | 1.0.7.0 |
 
@@ -108,7 +108,7 @@ def decrypt(b64):
 | **Anti-Process** | `HV1lRb3qZ2mL8fdiLE2Jb...` | `false` |
 | **Pastebin** | `JkM8/1t3EP1rhch6vcm60...` | `null` |
 
-The operator disabled every protection feature — anti-VM, anti-process, BSOD protection, and even the install/persistence mechanism. This is a **bare minimum deployment**: connect to C2, load plugins, nothing else. The 48KB size reflects this minimalism.
+The operator disabled every protection feature, anti-VM, anti-process, BSOD protection, and even the install/persistence mechanism. This is a **bare minimum deployment**: connect to C2, load plugins, nothing else. The 48KB size reflects this minimalism.
 
 ### Config Integrity Verification
 
@@ -124,7 +124,7 @@ return rsa.VerifyHash(
     Convert.FromBase64String(Server_signa_ture));
 ```
 
-If verification fails, the entire RAT exits — `return false` from `InitializeSettings()` triggers `Environment.Exit(0)` in `Program.Main()`. This prevents config tampering and ensures only the original operator's C2 server can control the implant.
+If verification fails, the entire RAT exits. `return false` from `InitializeSettings()` triggers `Environment.Exit(0)` in `Program.Main()`. This prevents config tampering and ensures only the original operator's C2 server can control the implant.
 
 ---
 
@@ -133,7 +133,7 @@ If verification fails, the entire RAT exits — `return false` from `InitializeS
 ![Plugin architecture](/assets/images/posts/dcrat/2_plugin_arch.png)
 *C2 sends plugin → store in registry → decompress → reflective load → invoke Plugin.Plugin.Run()*
 
-This is the core insight of this sample. The 48KB stub has **zero offensive capabilities**. Every feature analysts associate with DcRAT — keylogging, file theft, reverse shell, screen capture, webcam, browser password stealing — is delivered as a plugin DLL **after** the initial connection.
+This is the core insight of this sample. The 48KB stub has **zero offensive capabilities**. Every feature analysts associate with DcRAT, keylogging, file theft, reverse shell, screen capture, webcam, browser password stealing, is delivered as a plugin DLL **after** the initial connection.
 
 ```csharp
 // From ClientSocket.cs — the plugin dispatch
@@ -177,9 +177,9 @@ pluginType.GetMethod("Run").Invoke(instance, new object[] {
 });
 ```
 
-**Fileless persistence**: plugins are stored as GZip-compressed binary blobs in `HKCU\Software\<HWID>\<hash>`. They never touch the filesystem. On subsequent connections, the C2 sends the hash and the stub loads the plugin directly from the registry — no re-download needed.
+**Fileless persistence**: plugins are stored as GZip-compressed binary blobs in `HKCU\Software\<HWID>\<hash>`. They never touch the filesystem. On subsequent connections, the C2 sends the hash and the stub loads the plugin directly from the registry, no re-download needed.
 
-[Kaspersky's research](https://securelist.com/new-wave-of-attacks-with-dcrat-backdoor-distributed-by-maas/115850/) has documented **34+ distinct DcRAT plugins** including keylogger, webcam capture, file theft, password exfiltration, clipboard monitoring, reverse shell, and ransomware. None of these were present in this sample — they would have been delivered post-compromise.
+[Kaspersky's research](https://securelist.com/new-wave-of-attacks-with-dcrat-backdoor-distributed-by-maas/115850/) has documented **34+ distinct DcRAT plugins** including keylogger, webcam capture, file theft, password exfiltration, clipboard monitoring, reverse shell, and ransomware. None of these were present in this sample, they would have been delivered post-compromise.
 
 ---
 
@@ -221,7 +221,7 @@ When `Anti_Process` is enabled (disabled in this build), a background thread ter
 | `Regedit.exe` | Registry Editor |
 | `taskkill.exe` | taskkill command itself |
 
-Uses `CreateToolhelp32Snapshot` → `Process32First/Next` → `OpenProcess(PROCESS_TERMINATE)` → `TerminateProcess` — all via direct P/Invoke.
+Uses `CreateToolhelp32Snapshot` → `Process32First/Next` → `OpenProcess(PROCESS_TERMINATE)` → `TerminateProcess`, all via direct P/Invoke.
 
 ---
 
@@ -242,13 +242,13 @@ On first connection, the stub sends a `ClientInfo` MsgPack packet with:
 | Anti_virus | Installed AV products |
 | Group | `update` |
 
-The keepalive ping (every 10-15 seconds, randomized) includes the current **foreground window title** — providing passive surveillance of what the victim is doing, even without a keylogger plugin loaded.
+The keepalive ping (every 10-15 seconds, randomized) includes the current **foreground window title**, providing passive surveillance of what the victim is doing, even without a keylogger plugin loaded.
 
 ---
 
 ## Obfuscation Techniques
 
-The stub uses no packer or code-level obfuscator (no ConfuserEx, no Dotfuscator) — the class and method names are plaintext. Instead, it relies on **string-level obfuscation** layered across multiple techniques:
+The stub uses no packer or code-level obfuscator (no ConfuserEx, no Dotfuscator), the class and method names are plaintext. Instead, it relies on **string-level obfuscation** layered across multiple techniques:
 
 | # | Technique | Example | Purpose |
 |---|---|---|---|
@@ -260,13 +260,13 @@ The stub uses no packer or code-level obfuscator (no ConfuserEx, no Dotfuscator)
 | 6 | **RSA signature verification** | SHA256 of key verified against X509 cert | Anti-tampering — RAT exits if config was modified |
 | 7 | **GZip + MsgPack wire encoding** | All C2 traffic double-wrapped | Hides command structure from network inspection |
 
-The underscore trick is subtle — a YARA rule looking for `"Hosts"` or `"Ports"` won't match `"Hos_ts"` or `"Por_ts"`. Similarly, `"BSOD"` doesn't match `"BS_OD"`. These aren't random names — they're deliberately split to evade string signatures while remaining readable to the developer.
+The underscore trick is subtle, a YARA rule looking for `"Hosts"` or `"Ports"` won't match `"Hos_ts"` or `"Por_ts"`. Similarly, `"BSOD"` doesn't match `"BS_OD"`. These aren't random names, they're deliberately split to evade string signatures while remaining readable to the developer.
 
 ---
 
-## No Process Injection — But Fileless Execution Via Reflection
+## No Process Injection. But Fileless Execution Via Reflection
 
-The stub contains **no process injection code** — no `VirtualAllocEx`, no `WriteProcessMemory`, no `CreateRemoteThread`, no process hollowing. The only memory manipulation is the AMSI `VirtualProtect` patch.
+The stub contains **no process injection code**, no `VirtualAllocEx`, no `WriteProcessMemory`, no `CreateRemoteThread`, no process hollowing. The only memory manipulation is the AMSI `VirtualProtect` patch.
 
 However, the plugin system achieves **in-process fileless execution** via .NET reflection:
 
@@ -277,31 +277,31 @@ Type t = asm.GetType("Plugin.Plugin");
 Activator.CreateInstance(t).GetMethod("Run").Invoke(...);
 ```
 
-Plugin DLLs never touch disk — they're stored in the registry and loaded directly into the stub's process space. From a detection perspective, this is harder to catch than traditional injection because there's no cross-process memory write to hook.
+Plugin DLLs never touch disk, they're stored in the registry and loaded directly into the stub's process space. From a detection perspective, this is harder to catch than traditional injection because there's no cross-process memory write to hook.
 
 ---
 
 ## Code Weaknesses and Defensive Opportunities
 
-### Certificate Is Extractable — MITM the C2
+### Certificate Is Extractable. MITM the C2
 
-The X509 server certificate is embedded in the binary (Base64 in `Settings.Certifi_cate`). A defender who extracts the encrypted cert, decrypts it with the known AES key, and imports it can impersonate the C2 server. The `ValidateServerCertificate` callback compares against this embedded cert — if you present the same cert, the TLS handshake succeeds.
+The X509 server certificate is embedded in the binary (Base64 in `Settings.Certifi_cate`). A defender who extracts the encrypted cert, decrypts it with the known AES key, and imports it can impersonate the C2 server. The `ValidateServerCertificate` callback compares against this embedded cert, if you present the same cert, the TLS handshake succeeds.
 
 ### Plugin System Has No Code Signing
 
-`AppDomain.CurrentDomain.Load()` accepts any valid .NET assembly — no hash verification, no Authenticode check, no code signing. A C2 impersonator can push a cleanup plugin that removes persistence, deletes registry caches, and terminates the RAT.
+`AppDomain.CurrentDomain.Load()` accepts any valid .NET assembly, no hash verification, no Authenticode check, no code signing. A C2 impersonator can push a cleanup plugin that removes persistence, deletes registry caches, and terminates the RAT.
 
 ### Anti-VM Is Trivially Bypassable
 
-The only VM detection is WMI `Win32_CacheMemory` returning 0 entries. This is one of the weakest anti-VM checks available — most modern analysis VMs report cache memory correctly. Even those that don't can be patched with a single WMI provider override.
+The only VM detection is WMI `Win32_CacheMemory` returning 0 entries. This is one of the weakest anti-VM checks available, most modern analysis VMs report cache memory correctly. Even those that don't can be patched with a single WMI provider override.
 
-### HWID Is Predictable — Plugin Cache Is Findable
+### HWID Is Predictable. Plugin Cache Is Findable
 
-The hardware ID is `MD5(ProcessorCount + UserName + MachineName + OSVersion + SystemDriveTotalSize)[:20]`. All inputs are available to any process. An incident responder can compute the HWID and directly navigate to `HKCU\Software\<HWID>` to find cached plugin DLLs — even if the rootkit is active.
+The hardware ID is `MD5(ProcessorCount + UserName + MachineName + OSVersion + SystemDriveTotalSize)[:20]`. All inputs are available to any process. An incident responder can compute the HWID and directly navigate to `HKCU\Software\<HWID>` to find cached plugin DLLs, even if the rootkit is active.
 
 ### Keepalive Leaks Activity to Any MITM
 
-Every 10-15 seconds, the ping packet includes the victim's **foreground window title** in plaintext (inside the TLS tunnel). A defender who MITMs the connection (using the extracted cert) gets a real-time feed of what the victim sees on screen — effectively turning the RAT's surveillance against the operator.
+Every 10-15 seconds, the ping packet includes the victim's **foreground window title** in plaintext (inside the TLS tunnel). A defender who MITMs the connection (using the extracted cert) gets a real-time feed of what the victim sees on screen, effectively turning the RAT's surveillance against the operator.
 
 ### Cleanup Registry Reveals UAC Bypass Techniques
 
@@ -314,7 +314,7 @@ Registry.CurrentUser.DeleteSubKey("Software\\Classes\\mscfile");  // CompMgmtLau
 Registry.CurrentUser.DeleteSubKey("Software\\Classes\\ms-settings"); // fodhelper.exe bypass
 ```
 
-The stub cleans up after UAC bypass plugins — but the cleanup code itself reveals exactly which three UAC bypass techniques the operator's plugin toolkit uses. A defender can preemptively monitor these registry paths as early-warning indicators.
+The stub cleans up after UAC bypass plugins, but the cleanup code itself reveals exactly which three UAC bypass techniques the operator's plugin toolkit uses. A defender can preemptively monitor these registry paths as early-warning indicators.
 
 ---
 
@@ -406,7 +406,7 @@ python extract_dcrat_config.py sample.exe --key "HLsFOme5SzpKSRDkHnIN1Bwsu2s9x7N
 
 Two rules targeting this sample and the DcRAT family. Full file: [`rats/dcrat/dcrat_v107.yar`](https://github.com/taogoldi/YARA/blob/main/rats/dcrat/dcrat_v107.yar)
 
-**Rule 1 — Campaign-specific (this build):**
+**Rule 1. Campaign-specific (this build):**
 
 ```yara
 rule DcRAT_Config_Update35630
@@ -432,7 +432,7 @@ rule DcRAT_Config_Update35630
 }
 ```
 
-**Rule 2 — Generic DcRAT family:**
+**Rule 2. Generic DcRAT family:**
 
 ```yara
 rule DcRAT_Generic
@@ -478,11 +478,11 @@ alert tls $HOME_NET any -> $EXTERNAL_NET 35630 (
 
 ## Conclusion
 
-This sample is a masterclass in minimalist malware design. At 48KB, it's smaller than most legitimate DLLs — yet it scores 100/100 on CAPA because the **potential** for harm is built into its architecture, not its code. The stub is a delivery mechanism for a modular RAT ecosystem with [34+ documented plugins](https://securelist.com/new-wave-of-attacks-with-dcrat-backdoor-distributed-by-maas/115850/) that provide every offensive capability an operator needs.
+This sample is a masterclass in minimalist malware design. At 48KB, it's smaller than most legitimate DLLs, yet it scores 100/100 on CAPA because the **potential** for harm is built into its architecture, not its code. The stub is a delivery mechanism for a modular RAT ecosystem with [34+ documented plugins](https://securelist.com/new-wave-of-attacks-with-dcrat-backdoor-distributed-by-maas/115850/) that provide every offensive capability an operator needs.
 
-The DuckDNS C2 at `update35630[.]duckdns[.]org:35630` follows DcRAT's documented operational pattern — [Kaspersky identified 57+ new DcRAT domains in 2025 alone](https://securelist.com/new-wave-of-attacks-with-dcrat-backdoor-distributed-by-maas/115850/), many using dynamic DNS services. The "update" group tag and disabled protection features suggest this is either a test build or a targeted deployment where stealth mattered more than resilience.
+The DuckDNS C2 at `update35630[.]duckdns[.]org:35630` follows DcRAT's documented operational pattern. [Kaspersky identified 57+ new DcRAT domains in 2025 alone](https://securelist.com/new-wave-of-attacks-with-dcrat-backdoor-distributed-by-maas/115850/), many using dynamic DNS services. The "update" group tag and disabled protection features suggest this is either a test build or a targeted deployment where stealth mattered more than resilience.
 
-For defenders: the PBKDF2 salt `DcRatByqwqdanchun` is a high-fidelity family indicator — it's hardcoded in the `Aes256.cs` source and present in every DcRAT build. The mutex prefix `DcRatMutex_` is equally reliable. And the fileless plugin storage in `HKCU\Software\<HWID>` means forensic investigators should always check for binary registry values under user-accessible hives.
+For defenders: the PBKDF2 salt `DcRatByqwqdanchun` is a high-fidelity family indicator, it's hardcoded in the `Aes256.cs` source and present in every DcRAT build. The mutex prefix `DcRatMutex_` is equally reliable. And the fileless plugin storage in `HKCU\Software\<HWID>` means forensic investigators should always check for binary registry values under user-accessible hives.
 
 ---
 

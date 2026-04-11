@@ -6,10 +6,10 @@ categories: [malware-reversing, threat-intel]
 tags: [pulsar-rat, quasar, dotnet, costura, dpapi, aes, messagepack, yara, static-analysis, credential-theft]
 image:
   path: /assets/images/social/pulsar-analysis-2026.jpg
-description: "Offline static analysis of an MPRESS-packed Pulsar RAT variant: Costura extraction, AES-256 C2 protocol reversal, DPAPI credential theft, ConfuserEx deobfuscation, and Windows RE persistence — with reproducible tooling and YARA rules."
+description: "Offline static analysis of an MPRESS-packed Pulsar RAT variant: Costura extraction, AES-256 C2 protocol reversal, DPAPI credential theft, ConfuserEx deobfuscation, and Windows RE persistence, with reproducible tooling and YARA rules."
 ---
 
-Offline static analysis of an MPRESS-packed Pulsar RAT variant (QuasarRAT fork). This write-up covers Costura dependency extraction, AES-256/MessagePack C2 protocol reversal from decompiled IL, DPAPI browser credential theft walkthrough, ConfuserEx deobfuscation, and process injection chain mapping — all with reproducible tooling and YARA detection rules.
+Offline static analysis of an MPRESS-packed Pulsar RAT variant (QuasarRAT fork). This write-up covers Costura dependency extraction, AES-256/MessagePack C2 protocol reversal from decompiled IL, DPAPI browser credential theft walkthrough, ConfuserEx deobfuscation, and process injection chain mapping, all with reproducible tooling and YARA detection rules.
 
 All offsets, DN tokens, and IL references point into the sample listed below. No dynamic execution was performed.
 
@@ -19,16 +19,16 @@ All offsets, DN tokens, and IL references point into the sample listed below. No
 
 If you're not deep into .NET internals, here's a quick reference for the terminology used throughout:
 
-- **Pulsar RAT**: an open-source remote access trojan forked from QuasarRAT. It gives an attacker full control of a victim's computer — file management, keylogging, screen capture, and browser credential theft.
+- **Pulsar RAT**: an open-source remote access trojan forked from QuasarRAT. It gives an attacker full control of a victim's computer, file management, keylogging, screen capture, and browser credential theft.
 - **MPRESS**: a legitimate PE compressor. The malware author compressed the binary to make it harder to detect. Think of it as a zip file that unpacks itself at runtime.
 - **Costura/Fody**: a .NET build tool that embeds DLL dependencies as compressed resources inside the main EXE. Instead of shipping 10 DLLs, everything is in one file.
-- **DN token**: a .NET metadata token — an address that identifies a specific method, field, or type in a .NET binary. When we say "DN token `0x6000223`," we are pointing to a specific function.
+- **DN token**: a .NET metadata token, an address that identifies a specific method, field, or type in a .NET binary. When we say "DN token `0x6000223`," we are pointing to a specific function.
 - **IL offset**: the byte offset within a method's Intermediate Language (IL) body. Combination of DN token + IL offset gives a precise location in the code.
-- **DPAPI**: Windows Data Protection API — the system-level encryption that protects saved browser passwords. The RAT includes code to decrypt this.
+- **DPAPI**: Windows Data Protection API, the system-level encryption that protects saved browser passwords. The RAT includes code to decrypt this.
 - **MessagePack**: a binary serialization format (like JSON but smaller and faster). Pulsar uses it to structure C2 messages.
 - **AES-256/CBC**: the encryption algorithm used to protect C2 traffic between the RAT and the operator's server.
 
-**In plain language**: this sample is a single compressed EXE that unpacks itself, hides several DLLs inside its own body, encrypts all communication with its controller, and can steal every password your browser has saved — across Chrome, Firefox, Opera, and Brave.
+**In plain language**: this sample is a single compressed EXE that unpacks itself, hides several DLLs inside its own body, encrypts all communication with its controller, and can steal every password your browser has saved, across Chrome, Firefox, Opera, and Brave.
 
 ---
 
@@ -50,17 +50,17 @@ If you're not deep into .NET internals, here's a quick reference for the termino
 
 **Assessment**: Pulsar RAT v2.4.5.0 (QuasarRAT fork) with ConfuserEx-style identifier obfuscation, Fody/Costura dependency embedding, and AES-256/MessagePack C2 transport.
 
-**Scope**: Static analysis only — no dynamic execution, no live C2 interaction, no network captures.
+**Scope**: Static analysis only, no dynamic execution, no live C2 interaction, no network captures.
 
 ---
 
 ## Downloads
 
 - Analysis bundle: [analysis_data/pulsar_rat_apr_2026](https://github.com/taogoldi/analysis_data/tree/main/pulsar_rat_apr_2026) (no binaries)
-- Scripts: [scripts/](https://github.com/taogoldi/analysis_data/tree/main/pulsar_rat_apr_2026/scripts) — `run_full_analysis.py`, `triage_sample.py`, `extract_costura.py`, `extract_config.py`, `decode_strings.py`
-- YARA: [stealers/pulsar/pulsar_rat.yar](https://github.com/taogoldi/YARA/blob/main/stealers/pulsar/pulsar_rat.yar) — 5 rules (Costura bundle, browser stealer, anti-analysis, keylogger/screenshot, generic)
-- Reports: [reports/](https://github.com/taogoldi/analysis_data/tree/main/pulsar_rat_apr_2026/reports) — CAPA summary, FLOSS summary, capability matrix, IOC report
-- Stage flow: [docs/pulsar_stage_flow.md](https://github.com/taogoldi/analysis_data/tree/main/pulsar_rat_apr_2026/docs/pulsar_stage_flow.md) — Mermaid infection chain and C2 message flow
+- Scripts: [scripts/](https://github.com/taogoldi/analysis_data/tree/main/pulsar_rat_apr_2026/scripts). `run_full_analysis.py`, `triage_sample.py`, `extract_costura.py`, `extract_config.py`, `decode_strings.py`
+- YARA: [stealers/pulsar/pulsar_rat.yar](https://github.com/taogoldi/YARA/blob/main/stealers/pulsar/pulsar_rat.yar). 5 rules (Costura bundle, browser stealer, anti-analysis, keylogger/screenshot, generic)
+- Reports: [reports/](https://github.com/taogoldi/analysis_data/tree/main/pulsar_rat_apr_2026/reports). CAPA summary, FLOSS summary, capability matrix, IOC report
+- Stage flow: [docs/pulsar_stage_flow.md](https://github.com/taogoldi/analysis_data/tree/main/pulsar_rat_apr_2026/docs/pulsar_stage_flow.md). Mermaid infection chain and C2 message flow
 
 ---
 
@@ -86,7 +86,7 @@ costura.messagepack.annotations.dll.compressed → MessagePack.Annotations.dll (
 + 6 System.* runtime dependencies
 ```
 
-The CAPA rule `embed dependencies as resources using Fody/Costura` fires as a file-level match. The `access .NET resource` rule fires at **DN tokens `0x600029E`** and **`0x600081A`** — these are the Costura resource resolution paths.
+The CAPA rule `embed dependencies as resources using Fody/Costura` fires as a file-level match. The `access .NET resource` rule fires at **DN tokens `0x600029E`** and **`0x600081A`**, these are the Costura resource resolution paths.
 
 
 
@@ -94,7 +94,7 @@ The CAPA rule `embed dependencies as resources using Fody/Costura` fires as a fi
 
 The C2 transport uses AES-256/CBC encryption with MessagePack serialization. The TCP socket creation fires at **DN token `0x60001FF`** (IL offsets `0x32`–`0x35`). Send path at **`0x6000203`** (IL `0x11`), receive path at **`0x6000200`** (IL `0x54`) and **`0x6000201`** (IL `0x98`, `0x11`).
 
-The encryption layer is in `Pulsar.Common.dll` — the `Aes256` class with BCrypt operations at **DN token `0x6000223`** (IL offsets `0x91`, `0x51`, `0xDA`, `0xCC`). Key derivation via SHA-256 at **`0x60000DA`** (IL `0x0`, `0x8`).
+The encryption layer is in `Pulsar.Common.dll`, the `Aes256` class with BCrypt operations at **DN token `0x6000223`** (IL offsets `0x91`, `0x51`, `0xDA`, `0xCC`). Key derivation via SHA-256 at **`0x60000DA`** (IL `0x0`, `0x8`).
 
 
 
@@ -164,7 +164,7 @@ Key DN tokens for reverse engineering this sample, grouped by capability:
 
 ### The Aes256 Encryption Class
 
-The core crypto lives in `Pulsar.Common.dll` — the Costura-embedded dependency that is **not obfuscated** (the obfuscator runs before Costura packaging, so embedded DLLs retain their original identifiers).
+The core crypto lives in `Pulsar.Common.dll`, the Costura-embedded dependency that is **not obfuscated** (the obfuscator runs before Costura packaging, so embedded DLLs retain their original identifiers).
 
 Open `Pulsar.Common.dll` in dnSpy and navigate to the `Aes256` class:
 
@@ -265,7 +265,7 @@ The passphrase is a hardcoded string in the obfuscated `Settings` class. The fie
 To locate it:
 
 1. In dnSpy, find the `Aes256` constructor call in the main binary (DN token `0x6000223`)
-2. Trace backward from the constructor — the `ldstr` or `ldsfld` instruction immediately before it loads the passphrase
+2. Trace backward from the constructor, the `ldstr` or `ldsfld` instruction immediately before it loads the passphrase
 3. The static field referencing the Settings class gives you the obfuscated field name
 4. The string literal value is the actual passphrase (may be Base64-encoded)
 
@@ -365,9 +365,9 @@ class PulsarDecoder:
 ### How the Browser Harvester Works
 
 ![Credential theft pipeline](/assets/images/posts/pulsar/3_cred_theft.png)
-*Chromium path (DPAPI + AES-GCM) vs Firefox path (NSS3) vs Opera path (memory patching) — all converge to C2 exfiltration*
+*Chromium path (DPAPI + AES-GCM) vs Firefox path (NSS3) vs Opera path (memory patching), all converge to C2 exfiltration*
 
-The credential theft pipeline targets five browsers through Chromium-specific and Firefox-specific paths. All operations are async — the `d__XX` suffixes are compiler-generated state machine indices that survived obfuscation.
+The credential theft pipeline targets five browsers through Chromium-specific and Firefox-specific paths. All operations are async, the `d__XX` suffixes are compiler-generated state machine indices that survived obfuscation.
 
 **Chromium path** (Chrome, Brave, Opera, Opera GX):
 
@@ -426,11 +426,11 @@ public static byte[] DecryptBlob(byte[] encryptedData)
 
 ### The CloneBrowserProfileAsync Identity Takeover
 
-The most dangerous method. Instead of extracting individual credentials, `CloneBrowserProfileAsync` copies the **entire browser profile directory** — cookies, sessions, saved passwords, extensions, browsing history — to a staging location and exfiltrates it to C2. The operator imports this profile into their own browser, effectively **cloning the victim's authenticated sessions** without needing any passwords.
+The most dangerous method. Instead of extracting individual credentials, `CloneBrowserProfileAsync` copies the **entire browser profile directory**, cookies, sessions, saved passwords, extensions, browsing history, to a staging location and exfiltrates it to C2. The operator imports this profile into their own browser, effectively **cloning the victim's authenticated sessions** without needing any passwords.
 
 ### The PatchOperaAsync Method
 
-`PatchOperaAsync` (state machine index `d__25`) modifies the Opera browser binary or configuration to facilitate future credential extraction — possibly disabling certificate pinning or modifying the credential store encryption. This technique is not commonly seen in commodity RATs and suggests active development beyond the upstream QuasarRAT codebase.
+`PatchOperaAsync` (state machine index `d__25`) modifies the Opera browser binary or configuration to facilitate future credential extraction, possibly disabling certificate pinning or modifying the credential store encryption. This technique is not commonly seen in commodity RATs and suggests active development beyond the upstream QuasarRAT codebase.
 
 ---
 
@@ -448,7 +448,7 @@ IL 0x214 → CreateRemoteThread (call LoadLibrary)
 IL 0xC1  → OpenProcess (get target handle)
 ```
 
-8 total IL offset references — this is a well-exercised code path.
+8 total IL offset references, this is a well-exercised code path.
 
 ### Method 2: Thread Injection / Shellcode (DN tokens `0x6000658`, `0x60006FE`)
 
@@ -528,7 +528,7 @@ The custom syscall wrappers `SysNtQuerySystemInformation` and `SysNtQueryInforma
 
 ### Scheduled Task (DN token `0x60001EC`)
 
-6 IL offset references — the `schtasks.exe` command builder:
+6 IL offset references, the `schtasks.exe` command builder:
 
 ```
 IL 0xD  → ProcessStartInfo setup
@@ -542,7 +542,7 @@ IL 0x58 → Process.Start()
 
 ### File Association Hijacking (DN token `0x600055B`)
 
-8 IL offset references — modifies `HKCU\Software\Classes` to hijack a file extension:
+8 IL offset references, modifies `HKCU\Software\Classes` to hijack a file extension:
 
 ```
 IL 0x59, 0x62, 0x67, 0x77, 0x89 → RegistryKey.SetValue calls
@@ -550,7 +550,7 @@ IL 0xBE, 0xB8 → RegistryKey operations (association setup)
 IL 0xD4 → final persistence entry
 ```
 
-This same token (`0x600055B`) also handles self-deletion (IL `0x20`, `0x26`, `0x7E`) — the method both establishes persistence and cleans up the original dropper.
+This same token (`0x600055B`) also handles self-deletion (IL `0x20`, `0x26`, `0x7E`), the method both establishes persistence and cleans up the original dropper.
 
 ### Registry Defense Disabling (DN tokens `0x600055E`–`0x6000562`)
 
@@ -566,7 +566,7 @@ CAPA rule: `disable system features via registry on Windows` (T1562.001).
 
 ---
 
-## Costura Extraction — Automated Script
+## Costura Extraction. Automated Script
 
 For analysts wanting to extract the embedded DLLs programmatically:
 
@@ -904,9 +904,9 @@ alert tcp $HOME_NET any -> $EXTERNAL_NET any (
 The sample uses **ConfuserEx-style identifier renaming** applied *before* Costura packaging. This means:
 
 1. **The main Client assembly** has fully randomized namespace, class, method, and field names (lowercase gibberish namespaces like `bjaeujhapczempm`, mixed-case class names like `XfvRhfc8YGggaI`)
-2. **Embedded Costura DLLs** (Pulsar.Common.dll, MessagePack.dll) retain their **original unobfuscated identifiers** — the obfuscator runs first, then Costura packages the results
-3. **Compiler-generated names survive** — async state machines (`<Start*Async>d__XX`), P/Invoke `EntryPoint` attributes, and string literals are not renamed
-4. **Config values are AES-encrypted** at rest — decrypted at startup by the Settings class initializer
+2. **Embedded Costura DLLs** (Pulsar.Common.dll, MessagePack.dll) retain their **original unobfuscated identifiers**, the obfuscator runs first, then Costura packages the results
+3. **Compiler-generated names survive**, async state machines (`<Start*Async>d__XX`), P/Invoke `EntryPoint` attributes, and string literals are not renamed
+4. **Config values are AES-encrypted** at rest, decrypted at startup by the Settings class initializer
 
 ### Deobfuscation Algorithm
 
@@ -958,7 +958,7 @@ TcpClient(host, port) ← host comes from XfvRhfc8YGggaI.T1hPcB5PAVrkADQaPu94
 
 **Tool 1: de4dot-cex** (binary-level, pre-decompilation)
 
-[de4dot-cex](https://github.com/ViRb3/de4dot-cex) is a de4dot fork with full ConfuserEx support. Run it on the unpacked .NET binary *before* opening in dnSpy — it will strip control flow obfuscation, decrypt strings, remove proxy calls, and rename some identifiers:
+[de4dot-cex](https://github.com/ViRb3/de4dot-cex) is a de4dot fork with full ConfuserEx support. Run it on the unpacked .NET binary *before* opening in dnSpy, it will strip control flow obfuscation, decrypt strings, remove proxy calls, and rename some identifiers:
 
 ```bash
 # Basic ConfuserEx deobfuscation
@@ -968,7 +968,7 @@ de4dot-x64.exe RMnsgES_unpacked.exe -p crx
 # Open the cleaned binary in dnSpy for dramatically improved readability
 ```
 
-This handles the IL-level obfuscation (control flow flattening, string encryption, proxy delegates) but does **not** rename ConfuserEx's randomized identifiers to their original names — that requires semantic analysis.
+This handles the IL-level obfuscation (control flow flattening, string encryption, proxy delegates) but does **not** rename ConfuserEx's randomized identifiers to their original names, that requires semantic analysis.
 
 **Tool 2: deobfuscate_confuserex.py** (source-level, post-decompilation)
 
@@ -980,10 +980,10 @@ python deobfuscate_confuserex.py ./Client/ -o deobfuscation_report.json
 ```
 
 The script scans all `.cs` files and produces:
-- **P/Invoke map** — every obfuscated native method mapped to real Win32 API name (extracted from `[DllImport(EntryPoint="...")]`)
-- **Settings class identification** — finds the class with `Aes256` constructor + encrypted static fields
-- **Class role classification** — maps obfuscated class names to likely original names via string/API pattern matching
-- **Namespace purpose map** — groups namespaces by detected capability (credential theft, persistence, C2, etc.)
+- **P/Invoke map**, every obfuscated native method mapped to real Win32 API name (extracted from `[DllImport(EntryPoint="...")]`)
+- **Settings class identification**, finds the class with `Aes256` constructor + encrypted static fields
+- **Class role classification**, maps obfuscated class names to likely original names via string/API pattern matching
+- **Namespace purpose map**, groups namespaces by detected capability (credential theft, persistence, C2, etc.)
 
 Example output (truncated):
 
@@ -1090,7 +1090,7 @@ public static class XfvRhfc8YGggaI  // = Settings
 }
 ```
 
-The `suvQ4Oayzg()` initializer decrypts all fields, then `PRfiGKKEZAO()` verifies the key's RSA-SHA256 signature against the embedded X509 certificate — ensuring the config was signed by the server operator's private key.
+The `suvQ4Oayzg()` initializer decrypts all fields, then `PRfiGKKEZAO()` verifies the key's RSA-SHA256 signature against the embedded X509 certificate, ensuring the config was signed by the server operator's private key.
 
 ---
 
@@ -1116,7 +1116,7 @@ byte[] patch = new byte[] { 0xB8, 0x01, 0x00, 0x00, 0x00, 0xC3 };
 6. `ReadProcessMemory` → verifies the patch took
 7. Restores original page protection
 
-**Purpose:** Opera uses `GetCursorInfo` as an anti-automation check — if it returns FALSE (no cursor/no user session), Opera refuses certain operations. The patch makes it always return TRUE, enabling the RAT to interact with Opera headlessly for credential extraction and session cloning.
+**Purpose:** Opera uses `GetCursorInfo` as an anti-automation check, if it returns FALSE (no cursor/no user session), Opera refuses certain operations. The patch makes it always return TRUE, enabling the RAT to interact with Opera headlessly for credential extraction and session cloning.
 
 ---
 
@@ -1137,11 +1137,11 @@ The most sophisticated persistence mechanism in this sample. The `1OaugIljVER7J5
    - Adds a `RunOnce` entry pointing to the payload
    - Unloads the hive
 4. Modifies (or creates) `ResetConfig.xml` to hook two WinRE phases:
-   - `BasicReset_AfterImageApply` — fires after "Reset this PC → Keep my files"
-   - `FactoryReset_AfterImageApply` — fires after "Reset this PC → Remove everything"
+   - `BasicReset_AfterImageApply`, fires after "Reset this PC → Keep my files"
+   - `FactoryReset_AfterImageApply`, fires after "Reset this PC → Remove everything"
 5. If `ResetConfig.xml` already exists, chains the new script after the existing one
 
-**Result:** Even a full factory reset reinstalls the RAT on first boot. This is a rarely-seen technique that significantly raises the cost of remediation — the analyst must manually inspect `C:\Recovery\OEM\` and `ResetConfig.xml`.
+**Result:** Even a full factory reset reinstalls the RAT on first boot. This is a rarely-seen technique that significantly raises the cost of remediation, the analyst must manually inspect `C:\Recovery\OEM\` and `ResetConfig.xml`.
 
 ---
 
@@ -1167,17 +1167,17 @@ The monitor hooks `WM_CLIPBOARDUPDATE` (message 797) via `AddClipboardFormatList
 
 ## Deep Dive: FileHandlerXeno (Locked File Access)
 
-The `FileHandlerXeno` class is a critical enabler for credential theft — it reads files locked by running browsers without killing them:
+The `FileHandlerXeno` class is a critical enabler for credential theft, it reads files locked by running browsers without killing them:
 
-1. **Normal read** — tries `File.ReadAllBytes()` first
-2. **Handle hijacking** — on sharing violation (0x80070020):
+1. **Normal read**, tries `File.ReadAllBytes()` first
+2. **Handle hijacking**, on sharing violation (0x80070020):
    - Calls `NtQuerySystemInformation(SystemExtendedHandleInformation)` to enumerate all open handles system-wide
    - Filters for file handles matching the target path
    - `DuplicateHandle` clones matching handles into the RAT's process
    - `CreateFileMapping` + `MapViewOfFile` reads the file contents through the cloned handle
-3. **Process kill fallback** — if handle duplication fails, kills the owning process and retries
+3. **Process kill fallback**, if handle duplication fails, kills the owning process and retries
 
-This is why the RAT can read Chrome's `Login Data` SQLite database while Chrome is running — without the user noticing any disruption.
+This is why the RAT can read Chrome's `Login Data` SQLite database while Chrome is running, without the user noticing any disruption.
 
 ---
 
@@ -1221,7 +1221,7 @@ The message handler directory (`xcmobajxobfebgsqbrpftpzbwmcc`) contains 36 class
 
 Despite being significantly more sophisticated than commodity RATs, this Pulsar build has several exploitable flaws visible in the decompiled source.
 
-### The AES Key Is Plaintext — Full Config Decryption From Any Sample
+### The AES Key Is Plaintext. Full Config Decryption From Any Sample
 
 The encryption passphrase for all configuration fields sits in a public static string with no protection:
 
@@ -1229,11 +1229,11 @@ The encryption passphrase for all configuration fields sits in a public static s
 public static string mptvvvwEX9ovort = "F00D8BB24970E7D1F5959C85D7084E366FF0C645";
 ```
 
-The `Aes256` class in `Pulsar.Common` derives the actual AES-256 key via `SHA256(UTF8(passphrase))`. Given this string, a defender can decrypt every config field — C2 host, port, mutex, install path, campaign tag — from any captured sample without executing it. The key is even sent back to the C2 during the `ClientIdentification` handshake (field `EncryptionKey`), so passive network capture of the first message also reveals it.
+The `Aes256` class in `Pulsar.Common` derives the actual AES-256 key via `SHA256(UTF8(passphrase))`. Given this string, a defender can decrypt every config field. C2 host, port, mutex, install path, campaign tag, from any captured sample without executing it. The key is even sent back to the C2 during the `ClientIdentification` handshake (field `EncryptionKey`), so passive network capture of the first message also reveals it.
 
 The RSA signature verification (`PRfiGKKEZAO()`) that's supposed to protect the config is a single-point-of-failure: it catches all exceptions and returns `false`, and a one-byte IL patch (`brfalse` → `brtrue`) bypasses it entirely.
 
-### The Plugin SHA-256 Check Is Optional — Inject Cleanup DLLs
+### The Plugin SHA-256 Check Is Optional. Inject Cleanup DLLs
 
 The deferred assembly loader in `pEdGEk24PvF9Hi` verifies SHA-256 hashes of incoming plugin DLLs, but the check has a critical hole:
 
@@ -1246,9 +1246,9 @@ if (!string.IsNullOrWhiteSpace(descriptor.Sha256)
 // If Sha256 is null or empty → NO CHECK, assembly loaded blindly
 ```
 
-A C2 impersonator can send a `DeferredAssembliesPackage` with `Sha256 = null` and any .NET assembly they want. It will be loaded via `Assembly.Load(byte[])` with full trust into the current AppDomain — no sandboxing, no code signing. Even better: the assembly gets cached to `%APPDATA%\runtime\modules\` and reloaded automatically on every startup. A defender can drop a cleanup DLL into that directory with local disk access, and it will be loaded on the RAT's next restart.
+A C2 impersonator can send a `DeferredAssembliesPackage` with `Sha256 = null` and any .NET assembly they want. It will be loaded via `Assembly.Load(byte[])` with full trust into the current AppDomain, no sandboxing, no code signing. Even better: the assembly gets cached to `%APPDATA%\runtime\modules\` and reloaded automatically on every startup. A defender can drop a cleanup DLL into that directory with local disk access, and it will be loaded on the RAT's next restart.
 
-### The Opera Patcher Only Works on x86 — Crashes 64-bit Opera
+### The Opera Patcher Only Works on x86. Crashes 64-bit Opera
 
 The `GetCursorInfo` patch payload is hardcoded x86 machine code:
 
@@ -1256,7 +1256,7 @@ The `GetCursorInfo` patch payload is hardcoded x86 machine code:
 byte[] patch = new byte[] { 0xB8, 0x01, 0x00, 0x00, 0x00, 0xC3 };  // mov eax, 1; ret
 ```
 
-On a 64-bit Opera process, this 6-byte x86 stub is not a valid x64 function prologue. Writing it to the function's entry point will corrupt the instruction stream and likely crash Opera with an access violation. The operator's credential theft pipeline breaks on any 64-bit browser — which is the default on modern Windows. This is a blind spot the developer apparently never tested.
+On a 64-bit Opera process, this 6-byte x86 stub is not a valid x64 function prologue. Writing it to the function's entry point will corrupt the instruction stream and likely crash Opera with an access violation. The operator's credential theft pipeline breaks on any 64-bit browser, which is the default on modern Windows. This is a blind spot the developer apparently never tested.
 
 ### The Credential Stealer Has a Locale Bug
 
@@ -1266,7 +1266,7 @@ The Chromium decryptor (`cTFllqAFhI`) converts cipher text through a locale-depe
 byte[] bytes = Encoding.Default.GetBytes(cipherText);  // ← system locale dependent
 ```
 
-`Encoding.Default` varies by Windows language. On Japanese, Korean, Chinese, or Arabic systems, this garbles the raw cipher bytes before they reach the AES-GCM decryption path. The credential stealer silently returns empty strings — the operator gets nothing, and they won't know why. This affects Chrome, Brave, Opera, and Opera GX (all Chromium-based). Firefox is unaffected because it uses a separate NSS3 code path.
+`Encoding.Default` varies by Windows language. On Japanese, Korean, Chinese, or Arabic systems, this garbles the raw cipher bytes before they reach the AES-GCM decryption path. The credential stealer silently returns empty strings, the operator gets nothing, and they won't know why. This affects Chrome, Brave, Opera, and Opera GX (all Chromium-based). Firefox is unaffected because it uses a separate NSS3 code path.
 
 ### Costura Resource Corruption Is a Kill Switch
 
@@ -1278,7 +1278,7 @@ if (nullCache.ContainsKey(name))
     return null;  // never retry
 ```
 
-If a defender corrupts the `costura.pulsar.common.dll.compressed` embedded resource on disk (even a single byte), the `DeflateStream` decompression throws `InvalidDataException`, the assembly gets null-cached, and the RAT can never load `Pulsar.Common.dll` again — which contains `Aes256`, `MessagePack`, and `SecureMessageEnvelope`. The RAT is permanently bricked. This corruption survives restarts because the null-cache is populated during the module initializer before any recovery logic can run.
+If a defender corrupts the `costura.pulsar.common.dll.compressed` embedded resource on disk (even a single byte), the `DeflateStream` decompression throws `InvalidDataException`, the assembly gets null-cached, and the RAT can never load `Pulsar.Common.dll` again, which contains `Aes256`, `MessagePack`, and `SecureMessageEnvelope`. The RAT is permanently bricked. This corruption survives restarts because the null-cache is populated during the module initializer before any recovery logic can run.
 
 ### Message Length Has No Upper Bound
 
@@ -1297,14 +1297,14 @@ A rogue C2 or MITM can send a 4-byte header with `0x7FFFFFFF` to trigger a 2GB a
 
 ## Conclusion
 
-This analysis confirms the sample as Pulsar RAT v2.4.5.0 through Costura manifest strings, preserved namespace identifiers, and async method naming consistent with the public Pulsar source. The C2 protocol uses X509 certificate-based `SecureMessageEnvelope` wrapping over length-prefixed TCP with MessagePack serialization — fully reversible given the embedded certificate and AES passphrase `F00D8BB24970E7D1F5959C85D7084E366FF0C645`. The credential theft pipeline covers all major Chromium-based browsers (Chrome, Brave, Opera, Opera GX) through DPAPI + AES-GCM decryption and Firefox through NSS3 dynamic loading, supported by the `FileHandlerXeno` locked-file reader that bypasses browser file locks via system handle enumeration.
+This analysis confirms the sample as Pulsar RAT v2.4.5.0 through Costura manifest strings, preserved namespace identifiers, and async method naming consistent with the public Pulsar source. The C2 protocol uses X509 certificate-based `SecureMessageEnvelope` wrapping over length-prefixed TCP with MessagePack serialization, fully reversible given the embedded certificate and AES passphrase `F00D8BB24970E7D1F5959C85D7084E366FF0C645`. The credential theft pipeline covers all major Chromium-based browsers (Chrome, Brave, Opera, Opera GX) through DPAPI + AES-GCM decryption and Firefox through NSS3 dynamic loading, supported by the `FileHandlerXeno` locked-file reader that bypasses browser file locks via system handle enumeration.
 
 Beyond the upstream QuasarRAT feature set, this build adds several capabilities not present in the public source: **Opera process memory patching** (overwriting `GetCursorInfo` to bypass anti-automation), **Windows Recovery Environment persistence** (surviving full factory reset via `ResetConfig.xml` hook injection), a **9-currency crypto clipper** (BTC, ETH, XMR, SOL, LTC, DASH, XRP, TRX, BCH), **Hidden VNC** with virtual monitor support, **microphone/speaker streaming**, and a **universal plugin loader** for on-demand C2 module delivery with SHA256 verification.
 
 The full deobfuscation of the ConfuserEx-renamed codebase was achieved through four techniques: P/Invoke `EntryPoint` attribute leakage, unobfuscated `Pulsar.Common.*` type references, string literal analysis, and data-flow tracing from known API sinks. The complete C2 command dispatch table maps 26 handler classes covering 60+ individual commands across remote desktop, HVNC, shell execution, credential theft, surveillance, persistence, and system disruption.
 
-**Caveats**: The actual C2 server address requires decrypting the `T1hPcB5PAVrkADQaPu94` field using the AES key — this can be done with the extracted key and the `Pulsar.Common.Cryptography.Aes256` class, or by running `extract_config.py`. The deferred assembly system means additional capabilities (desktop capture, process injection modules) may be delivered at runtime from C2 and are not present in the static binary. DN token offsets and obfuscated field names are specific to this build; other Pulsar variants will differ, though the YARA rules target family-level strings that should persist.
+**Caveats**: The actual C2 server address requires decrypting the `T1hPcB5PAVrkADQaPu94` field using the AES key, this can be done with the extracted key and the `Pulsar.Common.Cryptography.Aes256` class, or by running `extract_config.py`. The deferred assembly system means additional capabilities (desktop capture, process injection modules) may be delivered at runtime from C2 and are not present in the static binary. DN token offsets and obfuscated field names are specific to this build; other Pulsar variants will differ, though the YARA rules target family-level strings that should persist.
 
 ---
 
-*Analysis performed using automated CAPA v9.3.1 / FLOSS pipeline with manual .NET IL cross-reference analysis and decompiled C# source review. All indicators derived from static analysis — no dynamic execution was performed. Obfuscated field mappings are inferred through data-flow tracing from known API sinks.*
+*Analysis performed using automated CAPA v9.3.1 / FLOSS pipeline with manual .NET IL cross-reference analysis and decompiled C# source review. All indicators derived from static analysis, no dynamic execution was performed. Obfuscated field mappings are inferred through data-flow tracing from known API sinks.*

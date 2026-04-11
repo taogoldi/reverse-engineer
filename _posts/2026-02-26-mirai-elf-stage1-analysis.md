@@ -39,7 +39,7 @@ Acquisition source (defanged): `http://144[.]172[.]108[.]230/bins/mynode.x86_64`
 - YARA (new variant high fidelity): [mirai_like_094e9_stage1_highfidelity.yar](https://github.com/taogoldi/YARA/blob/main/botnets/mirai/mirai_like_094e9_stage1_highfidelity.yar)
 - YARA (family heuristic, both variants): [mirai_like_stage1_family_heuristic.yar](https://github.com/taogoldi/YARA/blob/main/botnets/mirai/mirai_like_stage1_family_heuristic.yar)
 
-## Cross-Variant Validation (094e... sample)
+## Cross-Variant Validation (094e.. sample)
 
 I reran the same scripts, notebook flow, and YARA checks against:
 

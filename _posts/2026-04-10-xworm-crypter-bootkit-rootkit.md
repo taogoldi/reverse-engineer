@@ -7,14 +7,14 @@ tags: [xworm, crypter, dotnet, aes, pbkdf2, bootkit, rootkit, uefi, r77, dinvoke
 image:
   path: /assets/images/social/xworm-analysis-2026.jpg
   alt: "XWorm crypter analysis with bootkit and rootkit"
-description: "Tearing apart a .NET crypter to extract dual XWorm RAT payloads — then decompiling the RAT to find a UEFI bootkit with BlackLotus DBX bypass, an r77 rootkit, driver infection, CVE-2026-20817 zero-day UAC bypass, and D/Invoke API evasion."
+description: "Tearing apart a .NET crypter to extract dual XWorm RAT payloads, then decompiling the RAT to find a UEFI bootkit with BlackLotus DBX bypass, an r77 rootkit, driver infection, CVE-2026-20817 zero-day UAC bypass, and D/Invoke API evasion."
 ---
 
-I almost skipped this one. A 930KB .NET binary with 8.00 entropy in `.text` and nothing but `mscoree.dll: _CorExeMain` in the import table — it looked like another commodity crypter wrapping something boring. The automated triage scored it at 51.2, middle of the queue.
+I almost skipped this one. A 930KB .NET binary with 8.00 entropy in `.text` and nothing but `mscoree.dll: _CorExeMain` in the import table, it looked like another commodity crypter wrapping something boring. The automated triage scored it at 51.2, middle of the queue.
 
 Then I decompiled it and the entire crypter was fifty lines of C#. The PBKDF2 password, AES salt, and IV were sitting in the source code in plaintext. Two encrypted resources decrypted to PE executables. Both were XWorm.
 
-That would have been a decent blog post on its own — a crypter teardown with config extraction. But when I decompiled the XWorm payloads, I found something I wasn't expecting: a UEFI bootkit that attempts a BlackLotus DBX bypass and LogoFAIL-style exploit, an r77 userland rootkit that injects into every running process, a driver infection module that adds PE sections to Windows kernel drivers, and a zero-day UAC bypass exploiting CVE-2026-20817 via the Windows Error Reporting ALPC service.
+That would have been a decent blog post on its own, a crypter teardown with config extraction. But when I decompiled the XWorm payloads, I found something I wasn't expecting: a UEFI bootkit that attempts a BlackLotus DBX bypass and LogoFAIL-style exploit, an r77 userland rootkit that injects into every running process, a driver infection module that adds PE sections to Windows kernel drivers, and a zero-day UAC bypass exploiting CVE-2026-20817 via the Windows Error Reporting ALPC service.
 
 This post documents the full chain: cracking the crypter, extracting both payloads, then diving deep into the XWorm source code to map every capability.
 
@@ -30,15 +30,15 @@ This post documents the full chain: cracking the crypter, extracting both payloa
 | **MD5** | `4e4f12fc574559e8bf84bfe074f4cad5` |
 | **Size** | 930,304 bytes (909 KB) |
 | **Format** | PE32 .NET assembly (.NET 4.x) |
-| **Entropy** | `.text` section: **8.00** (maximum — fully encrypted) |
-| **Imports** | `mscoree.dll: _CorExeMain` (single import — pure .NET) |
-| **Manifest** | `requireAdministrator` — demands elevation on execution |
+| **Entropy** | `.text` section: **8.00** (maximum, fully encrypted) |
+| **Imports** | `mscoree.dll: _CorExeMain` (single import, pure .NET) |
+| **Manifest** | `requireAdministrator`, demands elevation on execution |
 
-98% of the file is a single encrypted blob. Only ~3KB of actual .NET IL bytecode — the decryption stub.
+98% of the file is a single encrypted blob. Only ~3KB of actual .NET IL bytecode, the decryption stub.
 
 ### Decompiled Crypter (Complete Source)
 
-ILSpy decompiled the entire crypter to a single class. Here it is in full — fifty lines that reveal the entire operation:
+ILSpy decompiled the entire crypter to a single class. Here it is in full, fifty lines that reveal the entire operation:
 
 ```csharp
 namespace vpppapxqlhunnbxavuims;
@@ -117,20 +117,20 @@ python extract_xworm_crypter.py sample.exe -o extracted/
 
 The crypter runs two hidden PowerShell commands before dropping payloads:
 
-**Command 1 — Fake error dialog (social engineering):**
+**Command 1. Fake error dialog (social engineering):**
 ```powershell
 Add-Type -AssemblyName System.Windows.Forms;
 [System.Windows.Forms.MessageBox]::Show('Error 0x00005','','OK','Error')
 ```
 
-This displays a Windows error popup with "Error 0x00005" — designed to make the victim think the file is corrupted and move on, while the payloads silently execute in the background.
+This displays a Windows error popup with "Error 0x00005", designed to make the victim think the file is corrupted and move on, while the payloads silently execute in the background.
 
-**Command 2 — Windows Defender exclusion:**
+**Command 2. Windows Defender exclusion:**
 ```powershell
 Add-MpPreference -ExclusionPath @($env:UserProfile,$env:SystemDrive) -Force
 ```
 
-Adds `C:\Users\<user>` and `C:\` to Defender's exclusion list — effectively disabling scanning for the entire system drive.
+Adds `C:\Users\<user>` and `C:\` to Defender's exclusion list, effectively disabling scanning for the entire system drive.
 
 ### Extracted Payloads
 
@@ -153,11 +153,11 @@ Both are .NET assemblies. The x64 variant has plaintext class/method names. The 
 | **Config** | Plaintext in `Config.cs` | Encrypted in obfuscated class |
 | **Purpose** | Primary implant (64-bit systems) | Fallback (32-bit / WoW64 persistence) |
 
-The dual drop ensures coverage: the x64 variant runs natively on modern Windows, while the x86 variant works as a fallback on older 32-bit systems or provides WoW64-based persistence (some EDR products monitor 64-bit processes more aggressively than 32-bit ones). Running both simultaneously also makes remediation harder — killing one leaves the other active.
+The dual drop ensures coverage: the x64 variant runs natively on modern Windows, while the x86 variant works as a fallback on older 32-bit systems or provides WoW64-based persistence (some EDR products monitor 64-bit processes more aggressively than 32-bit ones). Running both simultaneously also makes remediation harder, killing one leaves the other active.
 
-### PowerShell Evasion — The Comment Obfuscation Trick
+### PowerShell Evasion. The Comment Obfuscation Trick
 
-Both PowerShell commands use an interesting anti-detection technique — they insert **junk comments** (`<#xxx#>`) between every keyword to break signature-based detection:
+Both PowerShell commands use an interesting anti-detection technique, they insert **junk comments** (`<#xxx#>`) between every keyword to break signature-based detection:
 
 ```powershell
 # Command 1 — Fake error (as delivered):
@@ -176,7 +176,7 @@ Add-MpPreference -ExclusionPath @($env:UserProfile,$env:SystemDrive) -Force
 
 The junk tags (`<#mes#>`, `<#plk#>`, `<#ryw#>`, `<#rus#>`, `<#kgg#>`, `<#wjh#>`, `<#lyn#>`) are random 3-letter strings that break the `Add-MpPreference` and `MessageBox` signatures that AMSI and AV products scan for. PowerShell's parser treats them as valid comments and ignores them.
 
-Both commands are Base64+UTF-16LE encoded and passed via `powershell.exe -EncodedCommand` in a hidden window (`WindowStyle.Hidden`, `CreateNoWindow=true`) — the victim never sees PowerShell flash on screen.
+Both commands are Base64+UTF-16LE encoded and passed via `powershell.exe -EncodedCommand` in a hidden window (`WindowStyle.Hidden`, `CreateNoWindow=true`), the victim never sees PowerShell flash on screen.
 
 ---
 
@@ -189,7 +189,7 @@ Both commands are Base64+UTF-16LE encoded and passed via `powershell.exe -Encode
 
 ## XWorm RAT: The Decompiled Source
 
-The x64 payload decompiled cleanly to **33 C# source files** across 3 namespaces (`Client`, `Client.Helper`, `Leb128`). No obfuscation — every class and method name is readable. Here's the complete capability map.
+The x64 payload decompiled cleanly to **33 C# source files** across 3 namespaces (`Client`, `Client.Helper`, `Leb128`). No obfuscation, every class and method name is readable. Here's the complete capability map.
 
 ### Configuration
 
@@ -216,22 +216,22 @@ public static bool UserInit = true;         // Userinit hijack
 public static bool CmdlineAutorun = true;   // Setup\CmdLine persistence
 ```
 
-Pastebin fallback C2 is supported — if `Hosts` starts with `PASTEBIN:`, XWorm fetches the real C2 address from a Pastebin raw URL.
+Pastebin fallback C2 is supported, if `Hosts` starts with `PASTEBIN:`, XWorm fetches the real C2 address from a Pastebin raw URL.
 
 ### Boot Sequence
 
 When the XWorm payload starts, it executes this initialization chain (from `Program.cs`):
 
-1. **Config.Init()** — decode config, collect hardware ID, GPU, CPU, AV, GeoIP (`ip-api[.]com`)
-2. **CVE-2026-20817** — UAC bypass via Windows Error Reporting ALPC (if not admin)
-3. **AdvancedBootkit.Deploy()** — UEFI/MBR bootkit installation (new thread)
-4. **Rootkit.Initialize()** — r77 rootkit DLL injection
-5. **AsmiAndETW.Bypass()** — patch AMSI + ETW in memory
-6. **AntiProcess.Start()** — kill debuggers every 2.5 seconds
-7. **Install.Run()** — 5 persistence mechanisms
-8. **Mutex check** — single instance enforcement
-9. **SetProcessCritical()** — BSOD on kill (`RtlSetProcessIsCritical`)
-10. **Connect C2** — TCP+TLS 1.2 to `195[.]10[.]205[.]179:25565`
+1. **Config.Init()**, decode config, collect hardware ID, GPU, CPU, AV, GeoIP (`ip-api[.]com`)
+2. **CVE-2026-20817**. UAC bypass via Windows Error Reporting ALPC (if not admin)
+3. **AdvancedBootkit.Deploy()**. UEFI/MBR bootkit installation (new thread)
+4. **Rootkit.Initialize()**, r77 rootkit DLL injection
+5. **AsmiAndETW.Bypass()**, patch AMSI + ETW in memory
+6. **AntiProcess.Start()**, kill debuggers every 2.5 seconds
+7. **Install.Run()**. 5 persistence mechanisms
+8. **Mutex check**, single instance enforcement
+9. **SetProcessCritical()**. BSOD on kill (`RtlSetProcessIsCritical`)
+10. **Connect C2**. TCP+TLS 1.2 to `195[.]10[.]205[.]179:25565`
 
 ### CVE-2026-20817: Zero-Day UAC Bypass via WER ALPC
 
@@ -302,7 +302,7 @@ A single ALPC message disables UAC, disables Defender tamper protection, disable
 ![AMSI and ETW patching flow](/assets/images/posts/xworm/4_amsi_etw.png)
 *Force-load amsi.dll → resolve via D/Invoke → set RWX → patch AmsiScanBuffer → patch EtwEventWrite → flush cache*
 
-`AsmiAndETW.cs` patches security telemetry in memory. The key insight is the **forced AMSI initialization** — if `amsi.dll` isn't loaded yet, the code deliberately calls `Assembly.Load()` with garbage bytes, which triggers the .NET runtime to load `amsi.dll`, and then immediately patches it. All API resolution goes through `DInvokeCore` to avoid static import detection:
+`AsmiAndETW.cs` patches security telemetry in memory. The key insight is the **forced AMSI initialization**, if `amsi.dll` isn't loaded yet, the code deliberately calls `Assembly.Load()` with garbage bytes, which triggers the .NET runtime to load `amsi.dll`, and then immediately patches it. All API resolution goes through `DInvokeCore` to avoid static import detection:
 
 ```csharp
 // AMSI patch (x64): makes AmsiScanBuffer return AMSI_RESULT_CLEAN
@@ -316,11 +316,11 @@ byte[] etwPatch = { 0x48, 0x33, 0xC0,  // xor rax, rax
                     0xC3 };             // ret
 ```
 
-If `amsi.dll` isn't loaded yet, the code **deliberately triggers AMSI initialization** by calling `Assembly.Load()` with garbage bytes — forcing .NET to load `amsi.dll`, then immediately patches it.
+If `amsi.dll` isn't loaded yet, the code **deliberately triggers AMSI initialization** by calling `Assembly.Load()` with garbage bytes, forcing .NET to load `amsi.dll`, then immediately patches it.
 
 ### UEFI Bootkit (AdvancedBootkit.cs)
 
-The most complex module — 500+ lines implementing pre-OS persistence:
+The most complex module. 500+ lines implementing pre-OS persistence:
 
 **UEFI/GPT path:**
 - **BlackLotus DBX bypass**: reads the UEFI `dbx` revocation database via `GetFirmwareEnvironmentVariableW`, checks for BlackLotus revocation hashes, attempts to **overwrite `dbx` with empty data** to remove revocations
@@ -343,7 +343,7 @@ The most complex module — 500+ lines implementing pre-OS persistence:
 
 Implements the [r77 rootkit](https://github.com/bytecode77/r77-rootkit) for process/file/registry hiding:
 
-1. **DLL unhooking**: reads clean copies of `ntdll.dll`, `kernel32.dll`, `kernelbase.dll` from disk and overwrites their `.text` sections in memory — removing EDR hooks
+1. **DLL unhooking**: reads clean copies of `ntdll.dll`, `kernel32.dll`, `kernelbase.dll` from disk and overwrites their `.text` sections in memory, removing EDR hooks
 2. **Registry config**: creates `HKLM\SOFTWARE\$77config` with PIDs, process names, file paths, and registry keys to hide
 3. **Mass injection**: every 5 seconds, injects `r77-x64.dll` or `r77-x86.dll` into **every running process** via `VirtualAllocEx` → `WriteProcessMemory` → `CreateRemoteThread(LoadLibraryW)`
 4. **Shutdown cleanup**: hidden `Form` listens for `WM_QUERYENDSESSION` to clean up `$77` registry keys before reboot
@@ -361,26 +361,26 @@ Infects Windows kernel-mode drivers by adding new PE sections:
 4. Updates section count, `SizeOfImage`, `AddressOfEntryPoint`, and recalculates PE checksum
 5. Replaces original driver with infected version (TrustedInstaller impersonation)
 
-### Persistence (Install.cs) — 5 Methods
+### Persistence (Install.cs). 5 Methods
 
 ![Persistence layers](/assets/images/posts/xworm/2_persistence.png)
-*Five persistence mechanisms plus UEFI bootkit — designed to survive any single remediation attempt*
+*Five persistence mechanisms plus UEFI bootkit, designed to survive any single remediation attempt*
 
 | # | Method | Location |
 |---|---|---|
 | 1 | **Scheduled Task (logon)** | `schtasks /create /sc onlogon /tn "Windows Perfoment Host"` |
 | 2 | **Scheduled Task (watchdog)** | `schtasks /create /sc minute /mo 30 /tn "OneDrive Downloader"` |
-| 3 | **Userinit hijack** | `HKCU\...\winlogon\Userinit` — appends malware path |
-| 4 | **Setup\CmdLine** | `HKLM\SYSTEM\Setup\CmdLine` — runs during Windows setup mode |
+| 3 | **Userinit hijack** | `HKCU\...\winlogon\Userinit`, appends malware path |
+| 4 | **Setup\CmdLine** | `HKLM\SYSTEM\Setup\CmdLine`, runs during Windows setup mode |
 | 5 | **Registry Run key** | `HKCU\...\Run` — standard autorun (fallback) |
-| 6 | **AppInit_DLLs** | `HKLM\...\Windows\AppInit_DLLs` — loaded into every GUI process |
-| 7 | **UEFI Bootkit** | ESP stager or MBR overwrite — survives OS reinstall |
+| 6 | **AppInit_DLLs** | `HKLM\...\Windows\AppInit_DLLs`, loaded into every GUI process |
+| 7 | **UEFI Bootkit** | ESP stager or MBR overwrite, survives OS reinstall |
 
 Additional: **file pumping** inflates the installed binary by 700MB+ of null bytes to evade AV file-size scanning limits.
 
 ### Windows Defender Kill (WindowsDefender.cs)
 
-The most thorough Defender disablement I've seen in any sample — 17+ settings disabled:
+The most thorough Defender disablement I've seen in any sample. 17+ settings disabled:
 
 ```csharp
 // Via WMI MSFT_MpPreference:
@@ -416,11 +416,11 @@ Seven detection methods, any of which triggers `Environment.Exit(0)`:
 | **QEMU/SPICE** | Checks `Program Files` for `qemu-ga` and `SPICE Guest Tools` directories |
 | **Sandbox path** | Executable path contains "sandbox" |
 
-Bypass: setting environment variable `DISABLE_ANTIVIRTUAL=1` skips all checks — useful for the operator during testing.
+Bypass: setting environment variable `DISABLE_ANTIVIRTUAL=1` skips all checks, useful for the operator during testing.
 
 ### Plugin System (PluginLoader.cs)
 
-XWorm's capabilities are modular — the core RAT is a launcher, and features like keylogger, screen capture, file manager, and reverse shell are delivered as **plugins** from the C2:
+XWorm's capabilities are modular, the core RAT is a launcher, and features like keylogger, screen capture, file manager, and reverse shell are delivered as **plugins** from the C2:
 
 ```csharp
 // From PluginLoader.cs — reflective .NET assembly loading
@@ -434,13 +434,13 @@ public static void Load(byte[] pluginBytes, object[] parameters)
 }
 ```
 
-The `SaveInvoke` command caches plugins in the registry (`HKCU\Software\gogoduck`) as Base64-encoded binary values — they persist across reboots and reload automatically without re-downloading from C2.
+The `SaveInvoke` command caches plugins in the registry (`HKCU\Software\gogoduck`) as Base64-encoded binary values, they persist across reboots and reload automatically without re-downloading from C2.
 
 ### Encryption (EncryptString.cs + Xor.cs)
 
 Two encryption schemes:
 
-1. **Config strings**: XOR with a cyclic key from the `enc` field. If no custom key was set by the builder, strings are stored in plaintext — which is the case for this sample.
+1. **Config strings**: XOR with a cyclic key from the `enc` field. If no custom key was set by the builder, strings are stored in plaintext, which is the case for this sample.
 2. **Resources** (TLS certificate, driver payload): **RC4** encryption despite the class being named `Xor.cs`. The implementation is a full RC4 KSA + PRGA.
 
 ### Hardware Fingerprinting (HwidGenerator.cs)
@@ -473,11 +473,11 @@ This provides the operator with real-time visual surveillance even when no plugi
 
 ### Critical Process Protection
 
-`Methods.SetProcessCritical()` calls `RtlSetProcessIsCritical` via D/Invoke — killing XWorm causes a Blue Screen of Death. Combined with `Methods.PreventSleep()` (`SetThreadExecutionState` with `ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED`), the system never sleeps and the RAT never stops.
+`Methods.SetProcessCritical()` calls `RtlSetProcessIsCritical` via D/Invoke, killing XWorm causes a Blue Screen of Death. Combined with `Methods.PreventSleep()` (`SetThreadExecutionState` with `ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED`), the system never sleeps and the RAT never stops.
 
 ### C2 Protocol
 
-- **Transport**: TCP + TLS 1.2 (`SslStream` with certificate validation **completely disabled** — `ValidateServerCertificate()` always returns `true`)
+- **Transport**: TCP + TLS 1.2 (`SslStream` with certificate validation **completely disabled**. `ValidateServerCertificate()` always returns `true`)
 - **Serialization**: Custom LEB128 binary protocol supporting 13 data types (string, bool, byte, short, int, long, float, double, byte[], ushort, uint, ulong, nested arrays)
 - **Beacon**: 19-field `Connect` message with screenshot thumbnail, HWID, GeoIP, CPU, GPU, AV, privilege level, active window
 - **Heartbeat**: `Ping`/`Pong` every 10 seconds with screenshot + active window title
@@ -546,7 +546,7 @@ This provides the operator with real-time visual surveillance even when no plugi
 
 Despite the impressive feature set, the XWorm source reveals several exploitable flaws that defenders can leverage.
 
-### TLS Certificate Validation Is Completely Disabled — Full MITM
+### TLS Certificate Validation Is Completely Disabled. Full MITM
 
 The C2 connection uses TLS 1.2, but the certificate validation callback is a one-liner that accepts anything:
 
@@ -564,7 +564,7 @@ A defender with network position can MITM the TLS connection to `195[.]10[.]205[
 - Send `Exit` to kill the process
 - Send a cleanup plugin via `Invoke` (see below)
 
-### Plugin System Has Zero Integrity Checks — Inject Cleanup Code
+### Plugin System Has Zero Integrity Checks. Inject Cleanup Code
 
 The `PluginLoader.Load()` method calls `AppDomain.CurrentDomain.Load()` on Base64-decoded bytes with **no hash verification, no signature check, no sandboxing**:
 
@@ -584,9 +584,9 @@ A C2 impersonator can send a `SaveInvoke` command with a custom .NET assembly th
 - Restores the original bootloader from backup
 - Terminates the XWorm process
 
-The plugin is even **cached in the registry** (`HKCU\Software\gogoduck`) and reloaded on every restart — meaning a cleanup plugin persists across reboots.
+The plugin is even **cached in the registry** (`HKCU\Software\gogoduck`) and reloaded on every restart, meaning a cleanup plugin persists across reboots.
 
-### Developer Left Debug Backdoors — Environment Variable Bypass
+### Developer Left Debug Backdoors. Environment Variable Bypass
 
 Two environment variables completely disable XWorm's protection:
 
@@ -599,7 +599,7 @@ string env2 = Environment.GetEnvironmentVariable("DISABLE_PATCHING");
 if (env2 == "1") { SafeMode = "true"; /* skip AMSI+ETW patching */ }
 ```
 
-An incident responder can set `DISABLE_ANTIVIRTUAL=1` on a sandbox machine to force the sample to execute (bypassing all 7 anti-VM checks), and `DISABLE_PATCHING=1` to prevent AMSI/ETW from being patched — keeping full telemetry active during analysis.
+An incident responder can set `DISABLE_ANTIVIRTUAL=1` on a sandbox machine to force the sample to execute (bypassing all 7 anti-VM checks), and `DISABLE_PATCHING=1` to prevent AMSI/ETW from being patched, keeping full telemetry active during analysis.
 
 ### Rootkit DLLs Stored in Predictable Registry + Temp Path
 
@@ -616,7 +616,7 @@ A defender can:
 
 ### All Config and Plugins Readable from Registry
 
-Everything XWorm stores is under `HKCU\Software\gogoduck` with default permissions — any process running as the same user can read it:
+Everything XWorm stores is under `HKCU\Software\gogoduck` with default permissions, any process running as the same user can read it:
 
 ```
 reg query "HKCU\Software\gogoduck"
@@ -626,7 +626,7 @@ This exposes: cached plugin DLLs (Base64), hardware ID, and any saved configurat
 
 ### The "Perfoment" Typo Is a Detection Gift
 
-The scheduled task name `Windows Perfoment Host` contains a typo — "Perfoment" instead of "Performance." This is a **high-fidelity detection signal** with near-zero false positive rate. No legitimate Windows component uses this string:
+The scheduled task name `Windows Perfoment Host` contains a typo. "Perfoment" instead of "Performance." This is a **high-fidelity detection signal** with near-zero false positive rate. No legitimate Windows component uses this string:
 
 ```
 schtasks /query /tn "Windows Perfoment Host"
@@ -737,13 +737,13 @@ alert tcp $HOME_NET any -> $EXTERNAL_NET 25565 (
 
 ## Conclusion
 
-What started as a routine crypter teardown turned into the most feature-complete RAT analysis on this blog. The crypter itself was trivial — fifty lines of C#, PBKDF2 with a hardcoded password, two AES-encrypted resources. The payloads inside were anything but.
+What started as a routine crypter teardown turned into the most feature-complete RAT analysis on this blog. The crypter itself was trivial, fifty lines of C#, PBKDF2 with a hardcoded password, two AES-encrypted resources. The payloads inside were anything but.
 
-This XWorm build has every capability in the playbook: a UEFI bootkit that attempts BlackLotus-style DBX bypass and LogoFAIL exploitation, an r77 rootkit that injects into every running process, kernel driver infection via PE section injection, a zero-day UAC bypass via WER ALPC (CVE-2026-20817), complete Windows Defender kill via WMI, and five separate persistence mechanisms plus file pumping. The operator enabled every feature flag in the builder — `BootKit=true`, `Rootkit=true`, `DriverInfector=true`, `UseInstallAdmin=true`. Maximum aggression, zero subtlety.
+This XWorm build has every capability in the playbook: a UEFI bootkit that attempts BlackLotus-style DBX bypass and LogoFAIL exploitation, an r77 rootkit that injects into every running process, kernel driver infection via PE section injection, a zero-day UAC bypass via WER ALPC (CVE-2026-20817), complete Windows Defender kill via WMI, and five separate persistence mechanisms plus file pumping. The operator enabled every feature flag in the builder. `BootKit=true`, `Rootkit=true`, `DriverInfector=true`, `UseInstallAdmin=true`. Maximum aggression, zero subtlety.
 
 The "Superiority" campaign tag fits. The C2 at `195[.]10[.]205[.]179:25565` was active at time of analysis. The dual-architecture payload drop (x64 + x86 simultaneously) ensures coverage across all Windows installations. And the Pastebin C2 fallback means the operator can rotate infrastructure without recompiling the payload.
 
-For defenders: the crypter's PBKDF2 salt (`erytiqjdxdutsqckdapnnhprdujedlpd`) and IV (`xbginlypryzblkfy`) are high-fidelity indicators. The registry key `Software\gogoduck` and the r77 rootkit marker `$77config` are host-level IoCs. And the task name "Windows Perfoment Host" (note the typo — "Perfoment" instead of "Performance") is a reliable detection signal.
+For defenders: the crypter's PBKDF2 salt (`erytiqjdxdutsqckdapnnhprdujedlpd`) and IV (`xbginlypryzblkfy`) are high-fidelity indicators. The registry key `Software\gogoduck` and the r77 rootkit marker `$77config` are host-level IoCs. And the task name "Windows Perfoment Host" (note the typo. "Perfoment" instead of "Performance") is a reliable detection signal.
 
 ---
 

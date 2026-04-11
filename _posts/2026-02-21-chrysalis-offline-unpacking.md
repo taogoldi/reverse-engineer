@@ -2,14 +2,14 @@
 title: "From log.dll To A Decrypted Chrysalis Main Module"
 date: 2026-02-21 00:00:00 +0000
 permalink: /blog/chrysalis-offline-unpacking/
-description: "End-to-end offline unpacking of the Lotus Blossom Chrysalis backdoor chain — from DLL sideloading through shellcode extraction, region decryption, and RC4 config recovery — without a live Windows debugger."
+description: "End-to-end offline unpacking of the Lotus Blossom Chrysalis backdoor chain, from DLL sideloading through shellcode extraction, region decryption, and RC4 config recovery, without a live Windows debugger."
 categories: [malware-reversing, threat-intel]
 tags: [chrysalis, lotus-blossom, unpacking, emulation, malware-analysis]
 image:
   path: /assets/images/quantum-analysis-futuristic-v2.png
 ---
 
-This sample caught my attention because it looked like a perfect candidate for a question I keep coming back to: how far can you get with offline, reproducible unpacking before you ever need a live debugger? The Lotus Blossom "Chrysalis" chain that Rapid7 described in February 2026 has multiple layered stages, exception-driven control flow, and a reflective implant — exactly the kind of thing that usually forces analysts into fragile, one-off debugging sessions. I wanted to see if I could turn the whole thing into a deterministic pipeline that another analyst could rerun on a different machine and still recover the same bytes, hashes, and reversing pivots.
+This sample caught my attention because it looked like a perfect candidate for a question I keep coming back to: how far can you get with offline, reproducible unpacking before you ever need a live debugger? The Lotus Blossom "Chrysalis" chain that Rapid7 described in February 2026 has multiple layered stages, exception-driven control flow, and a reflective implant, exactly the kind of thing that usually forces analysts into fragile, one-off debugging sessions. I wanted to see if I could turn the whole thing into a deterministic pipeline that another analyst could rerun on a different machine and still recover the same bytes, hashes, and reversing pivots.
 
 The goal was evidence-centered outputs at every checkpoint. Instead of relying on "it ran in my debugger," each stage produces artifacts with verifiable hashes and structured diffs that are ready for peer review or handoff.
 

