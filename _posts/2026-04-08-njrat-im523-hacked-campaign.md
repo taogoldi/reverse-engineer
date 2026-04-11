@@ -835,12 +835,47 @@ This is a secondary password recovery tool executed post-infection. The Dropbox 
 
 ## Detection
 
-### YARA
+### YARA Rules
 
-Two rules in `detection/njrat_im523.yar`:
+Two rules. Full file: [`stealers/njrat/njrat_im523.yar`](https://github.com/taogoldi/YARA/blob/main/stealers/njrat/njrat_im523.yar)
 
-1. **njRAT_im523_HacKed_Campaign** — high-fidelity rule targeting this specific build (version + C2 + mutex + campaign tag)
-2. **njRAT_Generic_v07d** — family-level detection for any njRAT v0.7d variant (separator + 5 command strings)
+```yara
+rule njRAT_im523_HacKed_Campaign
+{
+    meta:
+        description = "Detects njRAT v0.7d im523 variant with 'HacKed' campaign tag"
+        author = "Tao Goldi"
+        family = "njRAT"
+    strings:
+        $ver = "im523" ascii wide
+        $sep = "|'|'|" ascii wide
+        $tag = "SGFjS2Vk" ascii wide
+        $c2 = "phishing.multimilliontoken.org" ascii wide
+        $mutex = "411e31664bdd9d96369d0a44d5111aef" ascii wide
+    condition:
+        uint16(0) == 0x5A4D and filesize < 100KB and
+        (($ver and $sep) or ($c2 and $mutex))
+}
+
+rule njRAT_Generic_v07d
+{
+    meta:
+        description = "Generic njRAT v0.7d family detection"
+        author = "Tao Goldi"
+        family = "njRAT"
+    strings:
+        $sep = "|'|'|" ascii wide
+        $s1 = "shutdowncomputer" ascii wide
+        $s2 = "restartcomputer" ascii wide
+        $s3 = "DisableKM" ascii wide
+        $s4 = "DisableTaskManager" ascii wide
+        $s5 = "TurnOffMonitor" ascii wide
+        $s6 = "ReverseMouse" ascii wide
+        $net = "mscoree.dll" ascii
+    condition:
+        uint16(0) == 0x5A4D and $net and $sep and 5 of ($s*)
+}
+```
 
 ### Network (Suricata)
 

@@ -396,12 +396,50 @@ The signing happens at the builder level (the `Factory-v3` framework applies it)
 
 ## Detection
 
-### YARA
+### YARA Rules
 
-Two rules in `detection/factory_v3_go_implant.yar`:
+Two rules. Full file: [`backdoors/gsb/factory_v3_go_implant.yar`](https://github.com/taogoldi/YARA/blob/main/backdoors/gsb/factory_v3_go_implant.yar)
 
-1. **Factory_v3_Go_Implant_NuclearDecoy** — high-fidelity rule targeting this specific framework (builder path + nuclear types + CJK function names)
-2. **Factory_v3_Go_Implant_Generic** — family-level detection matching 5+ nuclear type names in any Go PE binary
+```yara
+rule Factory_v3_Go_Implant_NuclearDecoy
+{
+    meta:
+        description = "Detects Factory-v3 Go implant with nuclear reactor decoy types + CJK names"
+        author = "Tao Goldi"
+        family = "Factory-v3"
+    strings:
+        $builder = "Factory-v3/builder/temp/" ascii
+        $nuke1 = "BeamEnvelope" ascii
+        $nuke2 = "ControlDrum" ascii
+        $nuke3 = "FuelRodBundle" ascii
+        $nuke4 = "XenonTransientTable" ascii
+        $nuke5 = "LatticeCell" ascii
+        $cjk1 = { E5 8A A8 E4 BD 9C E5 85 AB E6 9C 88 E9 B8 9F }
+        $cjk2 = { E8 B4 A6 E6 88 B7 E7 94 B7 E5 AD A9 E9 85 92 E5 90 A7 }
+        $gobuild = "Go build ID:" ascii
+    condition:
+        uint16(0) == 0x5A4D and filesize < 5MB and
+        ($builder or (4 of ($nuke*) and 1 of ($cjk*)))
+}
+
+rule Factory_v3_Go_Implant_Generic
+{
+    meta:
+        description = "Generic Factory-v3 detection via nuclear decoy naming convention"
+        author = "Tao Goldi"
+        family = "Factory-v3"
+    strings:
+        $n1 = "BeamEnvelope" ascii
+        $n2 = "ControlDrum" ascii
+        $n3 = "FuelRodBundle" ascii
+        $n4 = "XenonTransientTable" ascii
+        $n5 = "MagnetFlavor" ascii
+        $n6 = "LatticeCell" ascii
+        $go = "runtime.main" ascii
+    condition:
+        uint16(0) == 0x5A4D and 5 of ($n*) and $go
+}
+```
 
 ### Network (Suricata)
 
