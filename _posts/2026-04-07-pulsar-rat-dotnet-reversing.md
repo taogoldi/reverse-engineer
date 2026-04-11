@@ -5,7 +5,7 @@ date: 2026-04-07 00:00:00 +0000
 categories: [malware-reversing, threat-intel]
 tags: [pulsar-rat, quasar, dotnet, costura, dpapi, aes, messagepack, yara, static-analysis, credential-theft]
 image:
-  path: /assets/images/social/pulsar-rat-card.jpg
+  path: /assets/images/social/pulsar-analysis-2026.jpg
 description: "Offline static analysis of an MPRESS-packed Pulsar RAT variant: Costura extraction, AES-256 C2 protocol reversal, DPAPI credential theft, ConfuserEx deobfuscation, and Windows RE persistence — with reproducible tooling and YARA rules."
 ---
 

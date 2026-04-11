@@ -5,7 +5,7 @@ date: 2026-04-08 00:00:00 +0000
 categories: [malware-reversing, threat-intel]
 tags: [njrat, bladabindi, dotnet, rat, keylogger, usb-worm, static-analysis, yara]
 image:
-  path: /assets/images/social/njrat-im523-card.jpg
+  path: /assets/images/social/njrat-analysis-2026.jpg
 description: "Static analysis of a novel njRAT v0.7d im523 build with 'HacKed' campaign tag: C2 config extraction, 30+ command dispatch mapping, USB worm propagation, and credential theft — with reproducible Python tooling and YARA rules."
 ---
 
