@@ -4,7 +4,9 @@ permalink: /blog/xworm-crypter-bootkit-rootkit/
 date: 2026-04-10 00:00:00 +0000
 categories: [malware-reversing, threat-intel]
 tags: [xworm, crypter, dotnet, aes, pbkdf2, bootkit, rootkit, uefi, r77, dinvoke, yara, static-analysis]
-image: /assets/images/social/xworm-crypter-card.png
+image:
+  path: /assets/images/social/xworm-crypter-card.png
+  alt: "XWorm crypter analysis with bootkit and rootkit"
 description: "Tearing apart a .NET crypter to extract dual XWorm RAT payloads — then decompiling the RAT to find a UEFI bootkit with BlackLotus DBX bypass, an r77 rootkit, driver infection, CVE-2026-20817 zero-day UAC bypass, and D/Invoke API evasion."
 ---
 

@@ -5,7 +5,8 @@ permalink: /blog/chrysalis-offline-unpacking/
 description: "End-to-end offline unpacking of the Lotus Blossom Chrysalis backdoor chain — from DLL sideloading through shellcode extraction, region decryption, and RC4 config recovery — without a live Windows debugger."
 categories: [malware-reversing, threat-intel]
 tags: [chrysalis, lotus-blossom, unpacking, emulation, malware-analysis]
-image: /assets/images/quantum-analysis-futuristic-v2.png
+image:
+  path: /assets/images/quantum-analysis-futuristic-v2.png
 ---
 
 This sample caught my attention because it looked like a perfect candidate for a question I keep coming back to: how far can you get with offline, reproducible unpacking before you ever need a live debugger? The Lotus Blossom "Chrysalis" chain that Rapid7 described in February 2026 has multiple layered stages, exception-driven control flow, and a reflective implant — exactly the kind of thing that usually forces analysts into fragile, one-off debugging sessions. I wanted to see if I could turn the whole thing into a deterministic pipeline that another analyst could rerun on a different machine and still recover the same bytes, hashes, and reversing pivots.

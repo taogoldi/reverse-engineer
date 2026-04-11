@@ -4,7 +4,8 @@ permalink: /blog/gsb-backdoor-go-nuclear-decoy/
 date: 2026-04-09 00:00:00 +0000
 categories: [malware-reversing, threat-intel]
 tags: [golang, backdoor, gsb, gcleaner, go-malware, static-analysis, yara, radare2, obfuscation]
-image: /assets/images/social/gsb-backdoor-card.png
+image:
+  path: /assets/images/social/gsb-backdoor-card.png
 description: "Reversing a novel Go-compiled backdoor distributed by GCleaner that uses nuclear reactor physics type names and CJK-obfuscated function names to evade detection — with only 15.8% VirusTotal detection despite allocating RWX memory and calling SyscallN directly."
 ---
 

@@ -4,7 +4,8 @@ permalink: /blog/pulsar-rat-dotnet-reversing/
 date: 2026-04-07 00:00:00 +0000
 categories: [malware-reversing, threat-intel]
 tags: [pulsar-rat, quasar, dotnet, costura, dpapi, aes, messagepack, yara, static-analysis, credential-theft]
-image: /assets/images/social/pulsar-rat-card.png
+image:
+  path: /assets/images/social/pulsar-rat-card.png
 description: "Offline static analysis of an MPRESS-packed Pulsar RAT variant: Costura extraction, AES-256 C2 protocol reversal, DPAPI credential theft, ConfuserEx deobfuscation, and Windows RE persistence — with reproducible tooling and YARA rules."
 ---
 
