@@ -656,25 +656,30 @@ If the Pastebin paste ID is discovered (from memory dump or network capture), a 
 Four rules. Full file: [`rats/xworm/xworm_crypter_and_rat.yar`](https://github.com/taogoldi/YARA/blob/main/rats/xworm/xworm_crypter_and_rat.yar)
 
 ```yara
+import "pe"
+
 rule XWorm_NET_Crypter_PBKDF2 {
     meta:
         description = "Detects .NET crypter using PBKDF2/AES-128-CBC with encrypted payloads"
         author = "Tao Goldi"
+        version = 1
         family = "XWorm Crypter"
     strings:
         $pbkdf2 = "Rfc2898DeriveBytes" ascii wide
         $crypto = "CreateDecryptor" ascii wide
         $salt = "erytiqjdxdutsqckdapnnhprdujedlpd" ascii wide
         $iv = "xbginlypryzblkfy" ascii wide
-        $net = "mscoree.dll" ascii
     condition:
-        uint16(0) == 0x5A4D and $net and (($salt and $iv) or ($pbkdf2 and $crypto and $salt))
+        uint16(0) == 0x5A4D and
+        pe.imports("mscoree.dll") and
+        (($salt and $iv) or ($pbkdf2 and $crypto and $salt))
 }
 
 rule XWorm_RAT_v1_LEB128 {
     meta:
         description = "Detects XWorm RAT with LEB128 protocol + D/Invoke + AMSI bypass"
         author = "Tao Goldi"
+        version = 1
         family = "XWorm"
     strings:
         $leb = "LEB128" ascii wide
@@ -683,9 +688,9 @@ rule XWorm_RAT_v1_LEB128 {
         $cls1 = "AntiVirtual" ascii wide
         $cls2 = "PluginLoader" ascii wide
         $cls3 = "SecrityHidden" ascii wide
-        $net = "mscoree.dll" ascii
     condition:
-        uint16(0) == 0x5A4D and $net and
+        uint16(0) == 0x5A4D and
+        pe.imports("mscoree.dll") and
         ((2 of ($leb, $dinv, $amsi)) or (2 of ($cls*) and ($leb or $dinv)))
 }
 
@@ -693,6 +698,7 @@ rule XWorm_RAT_AdvancedBootkit {
     meta:
         description = "Detects XWorm with UEFI bootkit + rootkit + driver infection"
         author = "Tao Goldi"
+        version = 1
         family = "XWorm"
     strings:
         $boot1 = "AdvancedBootkit" ascii wide
@@ -701,15 +707,17 @@ rule XWorm_RAT_AdvancedBootkit {
         $root1 = "r77-x86.dll" ascii wide
         $root2 = "$77config" ascii wide
         $drv = "DriverInfector" ascii wide
-        $net = "mscoree.dll" ascii
     condition:
-        uint16(0) == 0x5A4D and $net and (2 of ($boot*) or 2 of ($root*) or ($drv and 1 of ($boot*)))
+        uint16(0) == 0x5A4D and
+        pe.imports("mscoree.dll") and
+        (2 of ($boot*) or 2 of ($root*) or ($drv and 1 of ($boot*)))
 }
 
 rule XWorm_RAT_Config_Superiority {
     meta:
-        description = "Detects this XWorm build — 'Superiority' campaign"
+        description = "Detects this XWorm build -- 'Superiority' campaign"
         author = "Tao Goldi"
+        version = 1
         family = "XWorm"
     strings:
         $c2 = "195.10.205.179" ascii wide

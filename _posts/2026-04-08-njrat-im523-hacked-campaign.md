@@ -840,11 +840,14 @@ This is a secondary password recovery tool executed post-infection. The Dropbox 
 Two rules. Full file: [`stealers/njrat/njrat_im523.yar`](https://github.com/taogoldi/YARA/blob/main/stealers/njrat/njrat_im523.yar)
 
 ```yara
+import "pe"
+
 rule njRAT_im523_HacKed_Campaign
 {
     meta:
         description = "Detects njRAT v0.7d im523 variant with 'HacKed' campaign tag"
         author = "Tao Goldi"
+        version = 1
         family = "njRAT"
     strings:
         $ver = "im523" ascii wide
@@ -862,6 +865,7 @@ rule njRAT_Generic_v07d
     meta:
         description = "Generic njRAT v0.7d family detection"
         author = "Tao Goldi"
+        version = 1
         family = "njRAT"
     strings:
         $sep = "|'|'|" ascii wide
@@ -871,9 +875,10 @@ rule njRAT_Generic_v07d
         $s4 = "DisableTaskManager" ascii wide
         $s5 = "TurnOffMonitor" ascii wide
         $s6 = "ReverseMouse" ascii wide
-        $net = "mscoree.dll" ascii
     condition:
-        uint16(0) == 0x5A4D and $net and $sep and 5 of ($s*)
+        uint16(0) == 0x5A4D and
+        pe.imports("mscoree.dll") and
+        $sep and 5 of ($s*)
 }
 ```
 

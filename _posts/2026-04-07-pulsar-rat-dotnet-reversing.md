@@ -666,6 +666,7 @@ rule PulsarRAT_Costura_Bundle
         description = "Detects Pulsar RAT with Fody/Costura embedded dependencies"
         author = "Tao Goldi"
         date = "2026-04"
+        version = 1
         sha256 = "8f31c06c8e7ea9eb451bf26666ac4a958bb485b2a8b71feace1981633b116c92"
         severity = "critical"
         family = "PulsarRAT"
@@ -697,6 +698,7 @@ rule PulsarRAT_Browser_Stealer
         description = "Detects Pulsar RAT browser credential harvesting module"
         author = "Tao Goldi"
         date = "2026-04"
+        version = 1
         severity = "critical"
         family = "PulsarRAT"
         mitre_attack = "T1555,T1539"
@@ -732,6 +734,7 @@ rule PulsarRAT_AntiAnalysis
         description = "Detects Pulsar RAT anti-analysis and evasion routines"
         author = "Tao Goldi"
         date = "2026-04"
+        version = 1
         severity = "high"
         family = "PulsarRAT"
         mitre_attack = "T1497,T1562.001"
@@ -765,6 +768,7 @@ rule PulsarRAT_Keylogger_Screenshot
         description = "Detects Pulsar RAT collection capabilities"
         author = "Tao Goldi"
         date = "2026-04"
+        version = 1
         severity = "high"
         family = "PulsarRAT"
         mitre_attack = "T1056.001,T1113,T1115"
@@ -796,9 +800,10 @@ rule PulsarRAT_Keylogger_Screenshot
 rule PulsarRAT_Generic
 {
     meta:
-        description = "Generic Pulsar RAT family detection — combined indicators"
+        description = "Generic Pulsar RAT family detection -- combined indicators"
         author = "Tao Goldi"
         date = "2026-04"
+        version = 1
         severity = "critical"
         family = "PulsarRAT"
 
