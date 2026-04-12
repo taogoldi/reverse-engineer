@@ -79,7 +79,7 @@ Four behavior clusters, each traced to specific DN tokens from CAPA analysis:
 
 The outer layer is MPRESS v2.x. After decompression, the .NET CLR bootstraps and Costura's `AppDomain.AssemblyResolve` hook intercepts all assembly load requests. The handler decompresses embedded DLLs from managed resources using `DeflateStream`:
 
-```
+```text
 costura.pulsar.common.dll.compressed       → Pulsar.Common.dll       (189 KB, v2.4.5.0)
 costura.messagepack.dll.compressed          → MessagePack.dll         (368 KB, v3.1.4.0)
 costura.messagepack.annotations.dll.compressed → MessagePack.Annotations.dll (18 KB)
@@ -105,7 +105,7 @@ Five browser-specific async handlers plus a full profile clone. The DPAPI decryp
 
 The preserved async state machine names tell us exactly which browsers are targeted:
 
-```
+```text
 <StartChromeAsync>d__19       — Chrome (Login Data + DPAPI)
 <StartFirefoxAsync>d__??      — Firefox (logins.json + NSS)
 <StartOperaAsync>d__??        — Opera (Chromium store)
@@ -237,7 +237,7 @@ public class Aes256
 
 The full wire format, reconstructed from the send/receive methods at DN tokens `0x6000200`–`0x6000203`:
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────┐
 │                      TCP Packet Layout                        │
 ├──────────┬───────────────────────────────────────────────────┤
@@ -269,7 +269,7 @@ To locate it:
 3. The static field referencing the Settings class gives you the obfuscated field name
 4. The string literal value is the actual passphrase (may be Base64-encoded)
 
-```
+```text
 // IL at token 0x6000223 — trace the key parameter
 ldsfld string Settings::GTExLoqJTqcqcWrK9LsKhIDZv66  // EncryptionKey
 newobj instance void Aes256::.ctor(string)
@@ -371,7 +371,7 @@ The credential theft pipeline targets five browsers through Chromium-specific an
 
 **Chromium path** (Chrome, Brave, Opera, Opera GX):
 
-```
+```text
 1. Locate profile: %LOCALAPPDATA%\Google\Chrome\User Data\Default\
 2. Copy "Login Data" SQLite DB to %TEMP% (the original is locked by the browser)
 3. Query: SELECT origin_url, username_value, password_value FROM logins
@@ -380,7 +380,7 @@ The credential theft pipeline targets five browsers through Chromium-specific an
 
 **Firefox path**:
 
-```
+```text
 1. Parse %APPDATA%\Mozilla\Firefox\profiles.ini → find profile directory
 2. Read <profile>\logins.json → encrypted credential entries
 3. Read <profile>\key4.db → NSS key database for decryption
@@ -440,7 +440,7 @@ Three injection methods identified through CAPA rule matches:
 
 ### Method 1: DLL Injection (DN token `0x60006CC`)
 
-```
+```text
 IL 0x128 → VirtualAllocEx (allocate memory in target)
 IL 0x127 → adjust allocation parameters
 IL 0x178 → WriteProcessMemory (write DLL path)
@@ -452,7 +452,7 @@ IL 0xC1  → OpenProcess (get target handle)
 
 ### Method 2: Thread Injection / Shellcode (DN tokens `0x6000658`, `0x60006FE`)
 
-```
+```text
 Token 0x6000658:
   IL 0x43, 0x41 → VirtualAllocEx with PAGE_EXECUTE_READWRITE (0x40)
   IL 0x67       → WriteProcessMemory (write shellcode)
@@ -470,7 +470,7 @@ Token 0x60006FE:
 
 The most advanced technique. Creates a suspended process with a spoofed parent PID:
 
-```
+```text
 Token 0x60006FD:
   IL 0x1FD → PROC_THREAD_ATTRIBUTE_PARENT_PROCESS (PPID spoof)
   IL 0x195 → UpdateProcThreadAttribute
@@ -486,7 +486,7 @@ PPID spoofing (T1134.004) makes the injected process appear as a child of a legi
 
 After injection, the RAT hides the injected thread:
 
-```
+```text
 Token 0x6000806:
   IL 0xD9 → NtSetInformationThread(handle, ThreadHideFromDebugger=0x11, NULL, 0)
   IL 0xE1 → status check
@@ -503,7 +503,7 @@ The anti-analysis suite runs at startup before any C2 connection. The sequence, 
 ![Anti-analysis decision tree](/assets/images/posts/pulsar/4_anti_analysis.png)
 *Sequential checks: debugger → debug port → debug flags → sandbox hostname → sandbox username → VM strings → proceed or terminate*
 
-```
+```text
 Start
   ├─ IsDebuggerPresent? (0x60007FC, IL 0x0)
   │   └─ Yes → Terminate/Sleep
@@ -530,7 +530,7 @@ The custom syscall wrappers `SysNtQuerySystemInformation` and `SysNtQueryInforma
 
 6 IL offset references, the `schtasks.exe` command builder:
 
-```
+```batch
 IL 0xD  → ProcessStartInfo setup
 IL 0x21 → FileName = "schtasks.exe"
 IL 0x44 → Arguments = "/create /tn {taskName} /tr {installPath} /sc onlogon /rl highest"
@@ -544,7 +544,7 @@ IL 0x58 → Process.Start()
 
 8 IL offset references, modifies `HKCU\Software\Classes` to hijack a file extension:
 
-```
+```text
 IL 0x59, 0x62, 0x67, 0x77, 0x89 → RegistryKey.SetValue calls
 IL 0xBE, 0xB8 → RegistryKey operations (association setup)
 IL 0xD4 → final persistence entry
@@ -556,7 +556,7 @@ This same token (`0x600055B`) also handles self-deletion (IL `0x20`, `0x26`, `0x
 
 Three functions that disable Windows security features via registry modifications:
 
-```
+```text
 0x600055E → DisableTaskManager (IL 0xB, 0x21)
 0x600055F → DisableRegistryEditor (IL 0xB, 0x21)
 0x6000562 → DisableUAC (IL 0xA, 0x20)
@@ -827,7 +827,7 @@ rule PulsarRAT_Generic
 
 ### Network Detection (Suricata)
 
-```
+```text
 # Pulsar RAT: length-prefixed TCP + AES-256-CBC encrypted MessagePack
 # Initial beacon (ClientInfo) is typically 200–600 bytes
 alert tcp $HOME_NET any -> $EXTERNAL_NET any (
@@ -951,7 +951,7 @@ using Pulsar.Common.Cryptography;          // → uses Aes256 or Sha256
 
 **Technique 4: Data-flow tracing from known sinks.** Trace backward from known API calls or Pulsar.Common types to identify which obfuscated fields hold which config values:
 
-```
+```text
 Aes256..ctor(key)  ← key comes from XfvRhfc8YGggaI.mptvvvwEX9ovort
                    → mptvvvwEX9ovort = EncryptionKey
 
@@ -992,7 +992,7 @@ The script scans all `.cs` files and produces:
 
 Example output (truncated):
 
-```
+```csharp
 CONFUSEREX DEOBFUSCATION REPORT
 ========================================================================
 Files analyzed: 166
@@ -1154,7 +1154,7 @@ The most sophisticated persistence mechanism in this sample. The `1OaugIljVER7J5
 
 The `WalddVelQIshHagR` class implements clipboard monitoring targeting **9 cryptocurrency address formats**:
 
-```
+```text
 BTC  — ^(1|3|bc1)[a-zA-Z0-9]{25,39}$
 LTC  — ^(L|M|3)[a-zA-Z0-9]{26,33}$
 ETH  — ^0x[a-fA-F0-9]{40}$

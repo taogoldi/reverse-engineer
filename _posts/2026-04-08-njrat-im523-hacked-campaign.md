@@ -120,7 +120,7 @@ python extract_njrat_config.py sample.exe
 
 njRAT uses **unencrypted raw TCP** with a simple text-based protocol:
 
-```
+```text
 ┌──────────────────────────────────────────────────────┐
 │                  njRAT Wire Format                     │
 ├──────────────────────────────────────────────────────┤
@@ -733,7 +733,7 @@ This is more subtle than simply killing the analysis tool, it manipulates the Ta
 
 The sandbox captured `netsh.exe` (PID 5712) being spawned as a child process:
 
-```
+```batch
 netsh firewall add allowedprogram "C:\Users\admin\Desktop\sample.exe" "sample.exe" ENABLE
 ```
 
@@ -762,7 +762,7 @@ The `&` operator chains commands sequentially in cmd.exe. The ping acts as a `sl
 
 The `Plugin` command downloads `Pass.exe` from a hardcoded Dropbox URL:
 
-```
+```text
 hXXps://dl[.]dropbox[.]com/s/p84aaz28t0hepul/Pass[.]exe?dl=0
 ```
 
@@ -884,7 +884,7 @@ rule njRAT_Generic_v07d
 
 ### Network (Suricata)
 
-```
+```text
 alert tcp $HOME_NET any -> $EXTERNAL_NET 443 (
     msg:"MALWARE njRAT v0.7d C2 beacon (plaintext on 443)";
     flow:established,to_server;
@@ -991,7 +991,7 @@ If a second command arrives within 100ms, `b` is reassigned while the first comm
 
 Every piece of RAT state, keylogs, plugin binaries, config values, victim identifier, is stored under `HKCU\Software\411e31664bdd9d96369d0a44d5111aef` with default permissions. Any process running as the same user can read it. For incident responders, this means:
 
-```
+```batch
 reg query HKCU\Software\411e31664bdd9d96369d0a44d5111aef
 ```
 

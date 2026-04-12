@@ -618,7 +618,7 @@ A defender can:
 
 Everything XWorm stores is under `HKCU\Software\gogoduck` with default permissions, any process running as the same user can read it:
 
-```
+```batch
 reg query "HKCU\Software\gogoduck"
 ```
 
@@ -628,7 +628,7 @@ This exposes: cached plugin DLLs (Base64), hardware ID, and any saved configurat
 
 The scheduled task name `Windows Perfoment Host` contains a typo. "Perfoment" instead of "Performance." This is a **high-fidelity detection signal** with near-zero false positive rate. No legitimate Windows component uses this string:
 
-```
+```batch
 schtasks /query /tn "Windows Perfoment Host"
 ```
 
@@ -731,7 +731,7 @@ rule XWorm_RAT_Config_Superiority {
 
 ### Suricata
 
-```
+```text
 alert tcp $HOME_NET any -> $EXTERNAL_NET 25565 (
     msg:"MALWARE XWorm RAT C2 beacon (TLS on port 25565)";
     flow:established,to_server;

@@ -54,7 +54,7 @@ The sample doesn't arrive on its own. According to [Loader Insight Agency](https
 
 The chain:
 
-```
+```text
 Victim machine (pre-compromised)
     → GCleaner PPI stub executes
     → Downloads 072533c1...exe from C2
@@ -247,7 +247,7 @@ The binary dynamically loads these DLLs through Go's `syscall` package lazy load
 
 Individual API targets (from import resolution and lazy proc setup):
 
-```
+```text
 VirtualAlloc, VirtualFree, VirtualQuery
 CreateThread, SuspendThread, ResumeThread
 SetThreadContext, GetThreadContext
@@ -319,7 +319,7 @@ Port 6789 is unusual, not a standard service port, but also not suspicious enoug
 
 The build path leaked in the Go binary metadata reveals the framework:
 
-```
+```text
 Factory-v3/builder/temp/7061c16a7a05b72f2cf8d5e57bdcc1d0/main.go
 ```
 
@@ -443,7 +443,7 @@ rule Factory_v3_Go_Implant_Generic
 
 ### Network (Suricata)
 
-```
+```text
 alert tcp $HOME_NET any -> $EXTERNAL_NET 6789 (
     msg:"MALWARE Backdoor.Win64.Gsb C2 communication";
     flow:established,to_server;
@@ -455,7 +455,7 @@ alert tcp $HOME_NET any -> $EXTERNAL_NET 6789 (
 
 ### Certificate-Based Detection
 
-```
+```text
 alert tls $HOME_NET any -> $EXTERNAL_NET any (
     msg:"MALWARE Gsb backdoor - www[.]glass[.]com signed binary";
     tls.cert_subject; content:"www[.]glass[.]com";

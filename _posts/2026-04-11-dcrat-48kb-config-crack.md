@@ -60,13 +60,13 @@ public Aes256(string masterKey)
 
 The wire format for each encrypted field:
 
-```
+```text
 [HMAC-SHA256 (32 bytes)][IV (16 bytes)][AES-CBC ciphertext (PKCS7 padded)]
 ```
 
 The master key is Base64-encoded in `Settings.Key`:
 
-```
+```text
 SExzRk9tZTVTenBLU1JEa0huSU4xQndzdTJzOXg3Tm8=
 ↓ Base64 decode
 HLsFOme5SzpKSRDkHnIN1Bwsu2s9x7No
@@ -469,7 +469,7 @@ rule DcRAT_Generic
 
 ### Suricata
 
-```
+```text
 alert tls $HOME_NET any -> $EXTERNAL_NET 35630 (
     msg:"MALWARE DcRAT C2 beacon (TLS on non-standard port)";
     flow:established,to_server;
