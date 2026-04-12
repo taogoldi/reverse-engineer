@@ -21,6 +21,8 @@ social:
   links:
     - https://github.com/taogoldi/reverse-engineer
 
+rss: /feed.xml
+
 theme_mode: dark
 toc: true
 
