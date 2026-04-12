@@ -655,7 +655,7 @@ If the Pastebin paste ID is discovered (from memory dump or network capture), a 
 
 Four rules. Full file: [`rats/xworm/xworm_crypter_and_rat.yar`](https://github.com/taogoldi/YARA/blob/main/rats/xworm/xworm_crypter_and_rat.yar)
 
-```yara
+```text
 import "pe"
 
 rule XWorm_NET_Crypter_PBKDF2 {

@@ -154,7 +154,7 @@ Rules are maintained in:
 - `detection/kaiji_like_0a70_rules.yar`
 - [YARA repo path](https://github.com/taogoldi/YARA/blob/main/botnets/kaiji/kaiji_like_0a70_rules.yar)
 
-```yara
+```text
 import "elf"
 
 rule Linux_KaijiLike_Persist_C2_0a70 {

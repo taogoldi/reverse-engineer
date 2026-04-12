@@ -659,7 +659,7 @@ Five rules covering distinct behavioral clusters. Full rule file: [`detection/pu
 
 **Rule 1: PulsarRAT_Costura_Bundle** (high-fidelity)
 
-```yara
+```text
 rule PulsarRAT_Costura_Bundle
 {
     meta:
@@ -691,7 +691,7 @@ rule PulsarRAT_Costura_Bundle
 
 **Rule 2: PulsarRAT_Browser_Stealer**
 
-```yara
+```text
 rule PulsarRAT_Browser_Stealer
 {
     meta:
@@ -727,7 +727,7 @@ rule PulsarRAT_Browser_Stealer
 
 **Rule 3: PulsarRAT_AntiAnalysis**
 
-```yara
+```text
 rule PulsarRAT_AntiAnalysis
 {
     meta:
@@ -761,7 +761,7 @@ rule PulsarRAT_AntiAnalysis
 
 **Rule 4: PulsarRAT_Keylogger_Screenshot**
 
-```yara
+```text
 rule PulsarRAT_Keylogger_Screenshot
 {
     meta:
@@ -796,7 +796,7 @@ rule PulsarRAT_Keylogger_Screenshot
 
 **Rule 5: PulsarRAT_Generic** (heuristic, lower fidelity)
 
-```yara
+```text
 rule PulsarRAT_Generic
 {
     meta:

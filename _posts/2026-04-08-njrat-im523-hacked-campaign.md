@@ -839,7 +839,7 @@ This is a secondary password recovery tool executed post-infection. The Dropbox 
 
 Two rules. Full file: [`rats/njrat/njrat_im523.yar`](https://github.com/taogoldi/YARA/blob/main/rats/njrat/njrat_im523.yar)
 
-```yara
+```text
 import "pe"
 
 rule njRAT_im523_HacKed_Campaign

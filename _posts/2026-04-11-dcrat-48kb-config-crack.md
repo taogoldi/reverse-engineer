@@ -408,7 +408,7 @@ Two rules targeting this sample and the DcRAT family. Full file: [`rats/dcrat/dc
 
 **Rule 1. Campaign-specific (this build):**
 
-```yara
+```text
 import "pe"
 
 rule DcRAT_Config_Update35630
@@ -437,7 +437,7 @@ rule DcRAT_Config_Update35630
 
 **Rule 2. Generic DcRAT family:**
 
-```yara
+```text
 rule DcRAT_Generic
 {
     meta:

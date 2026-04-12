@@ -400,7 +400,7 @@ The signing happens at the builder level (the `Factory-v3` framework applies it)
 
 Two rules. Full file: [`backdoors/gsb/factory_v3_go_implant.yar`](https://github.com/taogoldi/YARA/blob/main/backdoors/gsb/factory_v3_go_implant.yar)
 
-```yara
+```text
 rule Factory_v3_Go_Implant_NuclearDecoy
 {
     meta:

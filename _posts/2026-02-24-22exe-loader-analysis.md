@@ -267,7 +267,7 @@ Current working assessment is **Vidar-like** with **medium confidence**. Multipl
 
 Copy/paste-ready rules (single file):
 
-```yara
+```text
 import "pe"
 
 rule VIDAR_LIKE_22_STAGE1_HighFidelity

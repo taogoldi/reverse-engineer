@@ -317,7 +317,7 @@ Rules files:
 - [mirai_like_094e9_stage1_highfidelity.yar](https://github.com/taogoldi/YARA/blob/main/botnets/mirai/mirai_like_094e9_stage1_highfidelity.yar)
 - [mirai_like_stage1_family_heuristic.yar](https://github.com/taogoldi/YARA/blob/main/botnets/mirai/mirai_like_stage1_family_heuristic.yar)
 
-```yara
+```text
 rule MIRAI_LIKE_D40CF9_STAGE1_HighFidelity
 {
   meta:
