@@ -837,7 +837,7 @@ This is a secondary password recovery tool executed post-infection. The Dropbox 
 
 ### YARA Rules
 
-Two rules. Full file: [`stealers/njrat/njrat_im523.yar`](https://github.com/taogoldi/YARA/blob/main/stealers/njrat/njrat_im523.yar)
+Two rules. Full file: [`rats/njrat/njrat_im523.yar`](https://github.com/taogoldi/YARA/blob/main/rats/njrat/njrat_im523.yar)
 
 ```yara
 import "pe"
