@@ -776,15 +776,13 @@ This is a secondary password recovery tool executed post-infection. The Dropbox 
 
 | Type | Value | Context | Source |
 |---|---|---|---|
-| Domain | `phishing[.]multimilliontoken[.]org` | C2 server | Static + Dynamic |
-| IP | `188[.]114[.]97[.]3` | C2 (Cloudflare proxy) | ANY.RUN |
-| IP | `188[.]114[.]96[.]3` | C2 (Cloudflare proxy) | ANY.RUN |
-| IP | `104[.]21[.]50[.]193` | C2 (Cloudflare proxy) | Joe Sandbox |
+| Domain | `phishing[.]multimilliontoken[.]org` | C2 server (primary IOC -- domain is the actionable indicator) | Static + Dynamic |
 | Port | `443/tcp` | C2 port (raw TCP, not TLS) | Static + Dynamic |
-| URL | `hXXps://dl[.]dropbox[.]com/s/p84aaz28t0hepul/Pass[.]exe?dl=0` | Credential theft payload | Static |
-| Protocol | `|'|'|`-delimited plaintext TCP | njRAT signature | Static |
+| URL | `hXXps://dl[.]dropbox[.]com/s/p84aaz28t0hepul/Pass[.]exe?dl=0` | Credential theft payload download | Static |
+| Protocol | `|'|'|`-delimited plaintext TCP | njRAT wire protocol signature | Static |
 | Suricata | `BACKDOOR njRAT Bladabindi CnC Communication command ll` | IDS alert | Dynamic |
-| ASN | AS13335 (CLOUDFLARENET) | C2 hosting infrastructure | Dynamic |
+
+**Note on resolved IPs:** Dynamic analysis resolved the C2 domain to `188.114.97.3`, `188.114.96.3`, and `104.21.50.193`. These are **Cloudflare shared proxy IPs** (AS13335 CLOUDFLARENET) and should NOT be used as blocklist indicators. Blocking these IPs would impact thousands of legitimate websites behind Cloudflare. The actionable IOC is the domain, not the resolved IPs.
 
 ### Host Indicators
 
@@ -1032,7 +1030,7 @@ Two sandbox runs confirmed that the static analysis findings are consistent with
 
 | Finding | Value |
 |---|---|
-| C2 resolved | `104[.]21[.]50[.]193` (different Cloudflare IP, confirms DNS load balancing) |
+| C2 resolved | `104.21.50.193` (Cloudflare shared IP -- confirms DNS load balancing, not a blocklist IOC) |
 | Suricata | 1,000+ alerts (hit max), same SID 2021176 |
 | Sleep interception | 469,976 `Sleep` calls accelerated, the 1ms keylogger loop (`kl.WRK()`) is the cause |
 | CPU | >49% — confirmed by the `Thread.Sleep(1)` tight polling loop |

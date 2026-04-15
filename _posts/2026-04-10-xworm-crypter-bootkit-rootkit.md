@@ -495,7 +495,7 @@ This provides the operator with real-time visual surveillance even when no plugi
 |---|---|---|
 | IP | `195[.]10[.]205[.]179` | C2 server |
 | Port | `25565/tcp` | C2 port (TLS 1.2) |
-| URL | `hXXp://ip-api[.]com/line/` | GeoIP lookup |
+| URL | `hXXp://ip-api[.]com/line/` | GeoIP fingerprinting (legitimate service abused by malware -- not a blocklist target) |
 
 ### Host Indicators
 

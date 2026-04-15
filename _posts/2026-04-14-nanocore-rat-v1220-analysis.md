@@ -530,8 +530,8 @@ NanoCore Config Extraction
 | **PreventSystemSleep** | `True` |
 | **ActivateAwayMode** | `True` |
 | **UseCustomDnsServer** | `True` |
-| **PrimaryDnsServer** | `8[.]8[.]8[.]8` |
-| **BackupDnsServer** | `8[.]8[.]4[.]4` |
+| **PrimaryDnsServer** | `8.8.8.8` (Google DNS -- legitimate service, not an IOC) |
+| **BackupDnsServer** | `8.8.4.4` (Google DNS -- legitimate service, not an IOC) |
 | **ConnectDelay** | `4000 ms` |
 | **KeepAliveTimeout** | `30000 ms` |
 | **ShowInstallationDialog** | `True` |
