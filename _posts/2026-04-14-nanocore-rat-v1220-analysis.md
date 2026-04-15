@@ -601,7 +601,6 @@ The SurveillanceEx plugin implements keylogging (`GetKeyboardLayout`, `GetKeyboa
 | Primary C2 | `ama[.]jp[.]net:443` |
 | Backup C2 | `drmartensoutlet[.]us[.]com:443` |
 | Protocol | Raw TCP binary (no TLS despite port 443) |
-| Custom DNS | `8[.]8[.]8[.]8`, `8[.]8[.]4[.]4` |
 
 **Host-based**
 
