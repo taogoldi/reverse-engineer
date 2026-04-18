@@ -167,6 +167,7 @@ Notably absent from this binary are hardware-breakpoint checks (`DR0`-`DR7` insp
 
 Before harvesting any credentials Pony calls `CoCreateGuid` and combines the result with system hardware information to produce a 128-bit Hardware ID:
 
+{% raw %}
 ```c
 // Reconstructed HWID generation flow
 char hwid[64];
@@ -178,6 +179,7 @@ wsprintfA(hwid,
     guid.Data4[4], guid.Data4[5],
     guid.Data4[6], guid.Data4[7]);
 ```
+{% endraw %}
 
 The HWID travels in every POST request as the `Client Hash` field, allowing the panel backend to deduplicate submissions from the same machine. Pony tries to stabilize the identifier in two stages: first it reads `HKCU\Software\WinRAR\HWID` (WinRAR writes a per-installation GUID there on first run), and only if that value is missing does it fall back to `CoCreateGuid`. The WinRAR fallback means a host that has ever had WinRAR installed will report a persistent ID across Pony executions; one that has not will report a fresh random GUID each time. This two-tier logic is consistent across Pony variants — Guillaume Orlando documented the same pattern on a 2017-era sample.
 
@@ -729,7 +731,7 @@ API hashing, by contrast, would look nothing like this. A typical Metasploit or 
 Three places in this build:
 
 - **Session XOR-key derivation.** The `CoCreateGuid` output is MD5-hashed to produce the 16-byte rolling-XOR key applied to the credential blob before POST. The server re-derives the key from the `Client Hash` field, which is why that field is mandatory in every submission.
-- **HWID stabilization.** The raw GUID bytes are mixed through MD5 before being formatted as the `{%08X-%04X-...}` display string, giving the panel a deterministic per-host identifier even though `CoCreateGuid` produces fresh random values each run.
+- **HWID stabilization.** The raw GUID bytes are mixed through MD5 before being formatted as the {% raw %}`{%08X-%04X-...}`{% endraw %} display string, giving the panel a deterministic per-host identifier even though `CoCreateGuid` produces fresh random values each run.
 - **Payload-envelope checksum.** The final 16 bytes of the POST body are the MD5 of the preceding plaintext, so the server can reject truncated or bit-flipped submissions without attempting decryption first.
 
 None of these are API hashing. All three are standard applications of a cryptographic hash function: key derivation, fingerprinting, integrity.
