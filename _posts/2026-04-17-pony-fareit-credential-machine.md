@@ -6,7 +6,7 @@ categories: [malware-reversing, threat-intel]
 tags: [pony, fareit, credential-stealer, loader, x86, pe32, md5, aplib, yara, idapython]
 image:
   path: /assets/images/social/pony-fareit-2026.jpg
-description: "Deep-dive reverse-engineering of a 2012-era Pony/Fareit credential stealer: MSDN-style PEB anti-debug walkthrough, the GetTickCount-mod-7 anti-emulation gate that stalls Speakeasy at 9,980 ticks, MD5-vs-API-hashing identification, the 256-entry Russian-keyboard brute-force dictionary, and a released Python config extractor plus IDAPython beautifier scripts."
+description: "Reverse-engineering a 2012-era Pony/Fareit credential stealer: the GetTickCount-mod-7 anti-emulation gate that stalls Speakeasy at 9,980 ticks, MD5-vs-API-hashing identification, and released Python and IDAPython tooling."
 ---
 
 ## The Setup
