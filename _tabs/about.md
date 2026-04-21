@@ -39,6 +39,12 @@ This blog documents my reversing workflow across Windows PE, Linux ELF, and Go-c
 | [Gsb Backdoor]({{ "/blog/gsb-backdoor-go-nuclear-decoy/" | relative_url }}) | Go backdoor | Nuclear reactor decoy obfuscation, CJK garble, Factory-v3 builder |
 | [XWorm]({{ "/blog/xworm-crypter-bootkit-rootkit/" | relative_url }}) | .NET crypter + RAT | UEFI bootkit, r77 rootkit, CVE-2026-20817, dual payload extraction |
 | [DcRAT]({{ "/blog/dcrat-48kb-config-crack/" | relative_url }}) | .NET RAT | PBKDF2/AES config cracking, fileless plugin architecture |
+| [Quasar Loader]({{ "/blog/quasar-loader-custom-cipher/" | relative_url }}) | x64 loader + Quasar RAT | Custom byte-level cipher from raw disassembly, 3.2MB Quasar extraction, PBKDF2/AES-256 config crack |
+| [Chaos/Ares]({{ "/blog/chaos-ares-go-botnet/" | relative_url }}) | Go Linux botnet | 12 DDoS vectors, DNS-based C2 with AES/DES, 11 persistence mechanisms including SELinux bypass |
+| [NanoCore RAT]({{ "/blog/nanocore-rat-v1220-analysis/" | relative_url }}) | .NET RAT | v1.2.2.0 decompilation, plugin architecture, commercial-trojan persistence |
+| [ZyreC2]({{ "/blog/zyrec2-gaming-mirai-ddos/" | relative_url }}) | Linux DDoS botnet | Mirai fork, 9-method Minecraft flooder, Discord attack module, unstripped debug symbols |
+| [Pony / Fareit]({{ "/blog/pony-fareit-credential-machine/" | relative_url }}) | x86 credential stealer | 60+ FTP clients, GetTickCount-mod-7 anti-emulation gate, MD5 vs API-hashing identification |
+| [Discord RAT 2.0]({{ "/blog/discord-rat-2-chat-server-c2/" | relative_url }}) | .NET Discord-gateway RAT | 50-command WebSocket C2, one-byte fake ransomware, r77 rootkit + BlackNET stealer supply chain, operator snowflake timeline |
 
 ## Contact
 
