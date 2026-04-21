@@ -5,7 +5,8 @@ date: 2026-04-17 00:00:00 +0000
 categories: [malware-reversing, threat-intel]
 tags: [pony, fareit, credential-stealer, loader, x86, pe32, md5, aplib, yara, idapython]
 image:
-  path: /assets/images/social/pony-fareit-2026.jpg
+  path: /assets/images/posts/pony/logo.png
+  alt: "Pony/Fareit credential stealer analysis"
 description: "Reverse-engineering a 2012-era Pony/Fareit credential stealer: the GetTickCount-mod-7 anti-emulation gate that stalls Speakeasy at 9,980 ticks, MD5-vs-API-hashing identification, and released Python and IDAPython tooling."
 ---
 
