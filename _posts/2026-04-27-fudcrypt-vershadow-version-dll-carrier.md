@@ -702,42 +702,22 @@ The .NET payload sitting at `v5fllr.bin` is what an operator actually wants. The
 
 ## Sources and References
 
-### FUD Crypt platform reporting
+Only the sources actually cited in the body of this post are listed here.
+
+**FUD Crypt platform reporting**
 
 - Ctrl-Alt-Intel, *Dissecting FudCrypt: A Real-World Malware Crypting Service Analysis*. <https://ctrlaltintel.com/research/FudCrypt-analysis-1/>
 - CyberSecurityNews, *Hackers Use FUD Crypt to Generate Microsoft-Signed Malware With Built-In Persistence and C2*. <https://cybersecuritynews.com/hackers-use-fud-crypt/>
 - GBHackers, *Microsoft-Signed Malware Built With FUD Crypt Packs Persistence and C2*. <https://gbhackers.com/microsoft-signed-malware/>
-- Cyberpress, *Hackers Use FUD Crypt To Deliver Microsoft-Signed Malware With C2 Capabilities*. <https://cyberpress.org/fud-crypt-signs-malware/>
-- Sekoia.io Blog, *The Architects of Evasion: a Crypters Threat Landscape*. <https://blog.sekoia.io/the-architects-of-evasion-a-crypters-threat-landscape/>
-- Operator panel (referenced in the reporting above): `fudcrypt[.]net`
 
-### This sample on public services
+**This sample on public services**
 
 - Hybrid Analysis, full Falcon Sandbox report for the loader (`c73947cf...`). <https://www.hybrid-analysis.com/sample/c73947cf188f442bed228f62a3ba5611009fdc2f1878aaed7065db95ede05521/69e6b42079aaeb902a08ac15>
 - Hybrid Analysis, sample page for the decrypted .NET stage two (`86e9024c...`). <https://www.hybrid-analysis.com/sample/86e9024c21478f7fa59bf95aef8e7bfb869ed872e8a92e7ca19118df0f74f457>
 
-### VERSION.dll sideloading and the OneDrive vector
+**VERSION.dll OneDrive sideload (cited in the host-attribution section)**
 
-- CyberSecurityNews, *Hackers Exploit OneDrive.exe Through DLL Sideloading to Execute Arbitrary Code*. <https://cybersecuritynews.com/onedrive-exe-dll-sideloading-with-malicious-dll-files/>
-- GBHackers, *Hackers Abuse OneDrive.exe via DLL Sideloading to Run Malicious Code*. <https://gbhackers.com/hackers-abuse-onedrive-exe-via-dll-sideloading/>
-- Prevent Ransomware, *Hackers Exploit OneDrive DLL Sideloading: Why Isolation Matters*. <https://prevent-ransomware.com/blog/hackers-exploit-onedrive-dll-sideloading-why-isolation-matters>
-- MQSec, *OneDriveUpdater DLL Sideloading & SigFlip*. <https://www.mqsec.me/2023/01/19/onedriveupdater-dll-sideloading-sigflip/>
-- ChoiSG, *OneDriveUpdaterSideloading* PoC reproduction of the Palo Alto Unit 42 technique. <https://github.com/ChoiSG/OneDriveUpdaterSideloading>
 - Splunk Security Content, *Windows Hijack Execution Flow Version Dll Side Load* detection rule. <https://research.splunk.com/endpoint/8351340b-ac0e-41ec-8b07-dd01bf32d6ea/>
-- Rewterz, *Hackers Exploit OneDrive via DLL Sideloading to Run Malicious Code*. <https://rewterz.com/threat-advisory/hackers-exploit-onedrive-via-dll-sideloading-to-run-malicious-code>
-- ghacks Tech News, *OneDrive DLL Sideloading vulnerability exploited in the wild*. <https://www.ghacks.net/2022/10/06/onedrive-dll-sideloading-vulnerability-exploited-in-the-wild/>
-
-### General DLL sideload background
-
-- tothi, *dll-hijack-by-proxying* (the open-source MinGW DLL proxy template the FUD Crypt carrier appears to be derived from). <https://github.com/tothi/dll-hijack-by-proxying>
-- zSecurity, *DLL Proxying and Sideloading*. <https://zsecurity.org/dll-proxying-and-sideloading/>
-- Dennis Babkin, *Windows Security Legacy: DLL Hijacking - Why running executables from a user-writable location is a bad idea*. <https://dennisbabkin.com/blog/?t=windows-security-legacy-dll-hijacking-running-executables-from-user-writable-location>
-- Microsoft Learn, *Dynamic-link library search order* (canonical reference for Safe DLL Search Mode). <https://learn.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-search-order>
-
-### Catbox.moe abuse pattern (background)
-
-- The Nimble Nerd, *Catbox.moe Malware Madness: The Surprising Download Haven for Hackers*. <https://thenimblenerd.com/article/catbox-moe-malware-madness-the-surprising-download-haven-for-hackers/>
-- McAfee Labs, *REvil Ransomware Uses DLL Sideloading*. <https://www.mcafee.com/blogs/other-blogs/mcafee-labs/revil-ransomware-uses-dll-sideloading/>
 
 ### Public artefacts produced during this analysis
 
