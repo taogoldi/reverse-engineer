@@ -6,10 +6,9 @@ categories: [malware-reversing, threat-intel]
 tags: [fudcrypt, vershadow, dll-sideload, dotnet-loader, amsi-bypass, etw-patch, ror13, catbox, maas, mingw]
 description: "Reverse engineering a 64-bit MinGW VERSION.dll proxy carrier from the FUD Crypt MaaS platform: ROR-13 hash resolver, single-byte ETW patch, AMSI bypass via hardware breakpoint and VEH, RC4 plus 32-byte rolling XOR pipeline, and a live catbox stage-2 payload that politely told me it was a FudCrypt Test."
 image:
-  path: /assets/images/social/fudcrypt-vershadow-card.png
+  path: /assets/images/posts/fudcrypt-vershadow/cover.png
+  alt: "VERSION.dll Stealthy Search-Order Sideload Payload"
 ---
-
-![VERSION.dll Stealthy Search-Order Sideload Payload, cover](/assets/images/posts/fudcrypt-vershadow/cover.png)
 
 > **Downloads:** every artefact in this post is mirrored at [taogoldi/analysis_data/fudcrypt_vershadow_apr_2026](https://github.com/taogoldi/analysis_data/tree/main/fudcrypt_vershadow_apr_2026). The YARA rules are also mirrored at [taogoldi/YARA/loaders/fudcrypt](https://github.com/taogoldi/YARA/tree/main/loaders/fudcrypt). A consolidated download index is at [/downloads/fudcrypt/]({{ site.baseurl }}/downloads/fudcrypt/).
 
