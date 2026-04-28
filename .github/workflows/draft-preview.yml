@@ -1,0 +1,40 @@
+name: Draft Preview Build
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "_drafts/**"
+      - "_posts/**"
+      - "assets/**"
+      - "_config.yml"
+      - "Gemfile"
+      - "Gemfile.lock"
+
+permissions:
+  contents: read
+
+jobs:
+  build-draft-preview:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.3
+          bundler-cache: true
+
+      - name: Build site with drafts
+        run: bundle exec jekyll b --drafts --baseurl "" -d _site_preview
+        env:
+          JEKYLL_ENV: development
+
+      - name: Upload preview artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: draft-preview-site
+          path: _site_preview
