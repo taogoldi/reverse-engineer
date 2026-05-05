@@ -111,11 +111,11 @@ The chain identity is settled before any folder is created: GuLoader (outer NSIS
 
 ## Downloads
 
-- [Analysis bundle](GuLoader/) (no binaries; bring your own sample with the published SHA-256)
-- [Scripts folder](GuLoader/scripts/) - all reverse-engineering tools used in this post
-- [YARA rules](GuLoader/detection/guloader_nsis.yar) - 4 rules (outer NSIS dropper, dropped script artifacts, decoy padding, generic family)
-- [Reports](GuLoader/reports/) - analysis JSON, full NSIS opcode dump
-- [Flowcharts](GuLoader/images/) - kill chain, NSIS obfuscation, dropped-file map
+- [Analysis bundle](https://github.com/taogoldi/analysis_data/tree/main/guloader_apr_2026) (no binaries; bring your own sample with the published SHA-256)
+- [Scripts folder](https://github.com/taogoldi/analysis_data/tree/main/guloader_apr_2026/scripts) - all reverse-engineering tools used in this post
+- [YARA rules](https://github.com/taogoldi/analysis_data/blob/main/guloader_apr_2026/detection/guloader_nsis.yar) - 4 rules (outer NSIS dropper, dropped script artifacts, decoy padding, generic family)
+- [Reports](https://github.com/taogoldi/analysis_data/tree/main/guloader_apr_2026/reports) - analysis JSON, full NSIS opcode dump
+- [Flowcharts](https://github.com/taogoldi/analysis_data/tree/main/guloader_apr_2026/images) - kill chain, NSIS obfuscation, dropped-file map
 
 ### Tools shipped in this post
 
@@ -716,13 +716,13 @@ Five lines. Wrapped in 28 instructions of obfuscation. That ratio - **80% of the
 
 After the rainbow-table pass made the loader partially readable in IDA, three more tools were written to push further. Two of them landed cleanly. The third hit the limits of what static-only emulation can do against GuLoader and is documented here as much as a *failure mode* as a result, because the failure itself is informative.
 
-### Tool A: anti-disassembly junk-strip ([scripts/ida_strip_junk.py](GuLoader/scripts/ida_strip_junk.py))
+### Tool A: anti-disassembly junk-strip ([scripts/ida_strip_junk.py](https://github.com/taogoldi/analysis_data/blob/main/guloader_apr_2026/scripts/ida_strip_junk.py))
 
 Walks the IDB, finds every short unconditional `jmp` whose target is forward in the same function, and checks whether the bytes between the `jmp` and its target contain any privileged x86 instructions (`in`, `out`, `vmxon`, `arpl`, `icebp`, etc.). If yes, those bytes are marked as data so IDA stops trying to disassemble them.
 
 This is the standard opaque-jump-with-junk-bytes pattern. GuLoader uses it heavily; the loader has hundreds of these regions, each adding 12-80 bytes of garbage that the CPU never executes but that IDA's linear sweep dutifully decodes as nonsense like `in eax, dx; push es; out 2Eh, al`. After running this script the IDA listing shrinks dramatically and the privileged-instruction noise disappears. A sample run on the decoded buffer marked **roughly 4 KB of bytes as data across hundreds of regions**.
 
-### Tool B: API-slot mapper ([scripts/ida_map_slots.py](GuLoader/scripts/ida_map_slots.py))
+### Tool B: API-slot mapper ([scripts/ida_map_slots.py](https://github.com/taogoldi/analysis_data/blob/main/guloader_apr_2026/scripts/ida_map_slots.py))
 
 The loader's API resolution stores each resolved address in an `[ebp+SLOT]` slot, and later code dispatches via `call dword ptr [ebp+SLOT]`. Without knowing which API is in which slot, those calls look like opaque indirections. The mapper:
 
@@ -735,7 +735,7 @@ Result: a `call dword ptr [ebp+0xC8]` becomes `call dword ptr [ebp+0xC8]    ; <-
 
 Caveat: only works for chains that resolve to a *known* hash. Chains that resolve to `0x00000000` (the VEH-bait pattern, where the static value is meaningless) are skipped. So slots whose target hash is constructed at runtime via VEH are not mapped by this tool. A future run with a real-trace input could fill them in.
 
-### Tool C: Unicorn-based shellcode emulator ([scripts/emulate_shellcode.py](GuLoader/scripts/emulate_shellcode.py))
+### Tool C: Unicorn-based shellcode emulator ([scripts/emulate_shellcode.py](https://github.com/taogoldi/analysis_data/blob/main/guloader_apr_2026/scripts/emulate_shellcode.py))
 
 Concrete-execution attempt. Builds a complete fake Windows process environment (TEB, PEB, PEB_LDR_DATA with linked module entries for kernel32 / ntdll / user32 / wininet / winhttp / advapi32 / shell32, fake export tables seeded with our hashed API names in UTF-16-LE), maps the decoded shellcode into RWX memory, hooks every `INT3` to dispatch fake API calls, and runs.
 
@@ -768,7 +768,7 @@ After the basic emulator hit the CFG-drift wall, a Vectored Exception Handler di
    - `EXCEPTION_CONTINUE_EXECUTION` (`-1`): restore registers from the modified CONTEXT and resume at the new EIP.
    - Otherwise: skip past the INT3 with original registers.
 
-The dispatcher is the right shape and compiles cleanly. **But it is never exercised in our run**, because the loader's CFG drift to address `0xEF1` happens **before** the loader resolves and calls `AddVectoredExceptionHandler`. The VEH-registration path lives downstream of work the loader does first that depends on register/stack state we are not providing correctly at entry. The dispatcher is in [scripts/emulate_shellcode.py](GuLoader/scripts/emulate_shellcode.py) ready to fire the moment a real registration call lands.
+The dispatcher is the right shape and compiles cleanly. **But it is never exercised in our run**, because the loader's CFG drift to address `0xEF1` happens **before** the loader resolves and calls `AddVectoredExceptionHandler`. The VEH-registration path lives downstream of work the loader does first that depends on register/stack state we are not providing correctly at entry. The dispatcher is in [scripts/emulate_shellcode.py](https://github.com/taogoldi/analysis_data/blob/main/guloader_apr_2026/scripts/emulate_shellcode.py) ready to fire the moment a real registration call lands.
 
 What we *learned* by building it: the question of "where does GuLoader enter?" is harder than it looked. The shellcode buffer does not have a single obvious entry point. NSIS invokes the loader via `EnumResourceTypesA`-or-`CallWindowProcW`-style indirection, and the actual initial register/stack state matters because the loader uses `[ebp+SLOT]` indexing throughout. Entering at offset `0` produces nonsense disassembly. Entering at the first PEB walk (`0xb197`) presupposes that earlier code already initialized state. Entering at the `call $+5` get-EIP idiom at `0x1700` runs further than either alternative but eventually drifts on an indirect call through stale aliased-TEB data. To reach the VEH-registration code we would need to either:
 - Recover the *actual* entry point from the NSIS-script side (the `System::Call` that invokes the loader specifies a particular entry offset; we did not statically extract that detail, and finishing it would need a more complete NSIS emulator than the one we built).
