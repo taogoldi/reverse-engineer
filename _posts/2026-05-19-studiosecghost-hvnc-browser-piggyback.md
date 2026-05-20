@@ -4,7 +4,7 @@ permalink: /blog/studiosecghost-hvnc-browser-piggyback/
 date: 2026-05-19 00:00:00 +0000
 categories: [malware-reversing, threat-intel]
 tags: [hvnc, windows, browser-hijack, amadey, dropper, yara, suricata, ioc, scheduled-task, persistence, anti-analysis, gdiplus, c2]
-description: "Full static teardown of StudioSecGhost, a novel native x64 hVNC agent that piggybacks on Chrome/Edge/Firefox via per-window ghost cloaking, skipping CreateDesktopW entirely. C2: 2.26.122.211:4444. Pure disassembly, no sandbox required."
+description: "Full static teardown of StudioSecGhost, a novel native x64 hVNC agent that piggybacks on Chrome/Edge/Firefox via per-window ghost cloaking, skipping CreateDesktopW entirely. C2: 2.26.122[.]211:4444. Pure disassembly, no sandbox required."
 image:
   path: /assets/images/social/studiosecghost-card.png
   alt: "StudioSecGhost hVNC agent -- browser piggyback"
@@ -21,7 +21,7 @@ The sample arrived in the last 24 hours of ingest and carries zero public attrib
 - **What it is.** A native x86-64 hidden-VNC agent, internal codename `StudioSecGhost`, that pilots a sibling browser window inside the victim's existing Chrome / Edge / Firefox process tree.
 - **Why it is different.** It does *not* call `CreateDesktopW` / `SetThreadDesktop` (the standard hVNC pattern used by Pandora, DarkVNC, LOBSHOT). Instead it cloaks a per-window ghost via `WS_EX_LAYERED` + `WS_EX_TOOLWINDOW` + `SetLayeredWindowAttributes(alpha=0)`, then races to hide it before first paint through an `EnumWindows`-based callback the binary calls the "Interceptor."
 - **Static indicators.** Internal markers `StudioSecGhost`, `StudioSecVNC_Banner`, `.SecAnchor`, `GSystem`. Drop names `studiosec_bounce.html` / `chrome_update_manifest.html` / `chrome_task_<n>.xml` / `ssv_cleanup.bat`. Victim overlay text `  WARNING!  SECURITY AUDIT IN PROGRESS.  `.
-- **C2 and persistence.** Raw TCP, custom binary protocol, no TLS, to `2.26.122.211:4444` (AS201988 / VPSPay, Helsinki). Persistence via `schtasks /Create /XML` with `LogonTrigger` + `TimeTrigger PT2M` + `RestartOnFailure Count=999`, multiple replica slots on disk, and an in-process watchdog thread.
+- **C2 and persistence.** Raw TCP, custom binary protocol, no TLS, to `2.26.122[.]211:4444` (AS201988 / VPSPay, Helsinki). Persistence via `schtasks /Create /XML` with `LogonTrigger` + `TimeTrigger PT2M` + `RestartOnFailure Count=999`, multiple replica slots on disk, and an in-process watchdog thread.
 - **Detection opportunities.** YARA on the internal markers + 3-of-10 log-format prefixes; Suricata on TCP/4444 outbound and on JPEG-SOI bytes inside non-HTTP TCP frames; host-side hunt on `%TEMP%\chrome_task_<n>.xml` drops; Firefox `prefs.js` carrying both `browser.sessionstore.resume_from_crash=false` and `toolkit.startup.max_resumed_crashes=-1` as a forensic indicator.
 - **Caveat.** The first-party analysis is **pure static** -- disassembly only, no dynamic detonation. Behavioral inferences are grounded in the disassembly cited at every claim site. Several of those inferences (C2 IP+port, Chrome User Data access, bounce-HTML drop, scheduled-task XML staging) have since been corroborated against public sandbox telemetry for the same SHA-256; see **Public Sandbox Corroboration**. Items not yet validated dynamically are flagged in **Remaining Open Questions**.
 
@@ -42,7 +42,7 @@ The sample arrived in the last 24 hours of ingest and carries zero public attrib
 | OriginalFilename (version info) | `ahy.exe` |
 | ProductName / FileDescription | `ahy` |
 | Family marker | `StudioSecGhost` (in bounce-HTML title and window search string) |
-| C2 | `2.26.122.211` (VPSPay AS201988, Helsinki, FI) |
+| C2 | `2.26.122[.]211` (VPSPay AS201988, Helsinki, FI) |
 | TLP | TLP:CLEAR |
 
 ---
@@ -129,7 +129,7 @@ All operational strings are stored as UTF-16LE wide strings in `.rdata`, recover
 
 Recovered strings include:
 
-- C2 target literal: `2.26.122.211` as a standalone wide string at VA `0x140049BB8`
+- C2 target literal: `2.26.122[.]211` as a standalone wide string at VA `0x140049BB8`
 - C2 log format: `[NET] AgentNetwork started. Target: %ls:%u` at VA `0x14004A280`
 - Log prefixes: `[INIT]`, `[CHROME]`, `[VNC]`, `[NET]` -- one per subsystem
 - Bounce HTML format strings: `%sstudiosec_bounce.html`, `%s\chrome_update_manifest.html`
@@ -174,7 +174,7 @@ The port `0x115c` = **4444** -- the canonical Metasploit / Meterpreter default. 
 
 ```text
 .text:140005f75  mov  r8d, ebx                     ; port = 4444
-.text:140005f78  lea  rdx, [rip + 0x43c39]         ; -> L"2.26.122.211"  (VA 0x140049BB8)
+.text:140005f78  lea  rdx, [rip + 0x43c39]         ; -> L"2.26.122[.]211"  (VA 0x140049BB8)
 .text:140005f7f  lea  rcx, [rip + 0x442fa]         ; -> "[NET] AgentNetwork started. Target: %ls:%u"
 .text:140005f86  call agent_log                    ; -> 0x14000E480
 ```
@@ -405,7 +405,7 @@ Output for the analyzed sample:
 
 ```json
 {
-  "c2_ip": "2.26.122.211",
+  "c2_ip": "2.26.122[.]211",
   "c2_port_candidates": [],
   "bounce_html_filenames": [
     "%s\\chrome_update_manifest.html",
@@ -537,7 +537,7 @@ The agent copies itself to replica slots under `%TEMP%` and/or `%APPDATA%` paths
 
 ## Command-and-Control Protocol
 
-The agent communicates over raw TCP to `2.26.122.211:4444`. The IP is stored as a UTF-16LE `.rdata` literal at VA `0x140049BB8`, while the port is recovered from `.text` as the immediate operand `0x115c` (4444 decimal) of the `mov ebx, 0x115c` instruction at VA `0x140005DEC`. Public sandbox telemetry for this SHA-256 records outbound TCP to `2.26.122.211:4444` at runtime, corroborating both the IP and port via a second method. There is no TLS. The wire format is a custom binary protocol with a 1-byte opcode header.
+The agent communicates over raw TCP to `2.26.122[.]211:4444`. The IP is stored as a UTF-16LE `.rdata` literal at VA `0x140049BB8`, while the port is recovered from `.text` as the immediate operand `0x115c` (4444 decimal) of the `mov ebx, 0x115c` instruction at VA `0x140005DEC`. Public sandbox telemetry for this SHA-256 records outbound TCP to `2.26.122[.]211:4444` at runtime, corroborating both the IP and port via a second method. There is no TLS. The wire format is a custom binary protocol with a 1-byte opcode header.
 
 ### Session Lifecycle
 
@@ -623,7 +623,7 @@ Stages 0-3 are sequential; stages 4-7 run concurrently as independent threads sp
 
 **Stage 3 -- Bootstrap:** `GdiplusStartup`, `WSAStartup`. `RegisterClassExW` for both the anchor window (`GSystem` / `.SecAnchor`) and the banner window (`StudioSecVNC_Banner`). Spawns the four concurrent worker threads listed below.
 
-**Stage 4 (thread) -- C2 Network:** `getaddrinfo` + `connect` to `2.26.122.211:<port>`. Custom binary handshake; `AUTH_LOGIN` with operator tag and browser inventory; command-dispatch loop; reconnect with backoff on close.
+**Stage 4 (thread) -- C2 Network:** `getaddrinfo` + `connect` to `2.26.122[.]211:<port>`. Custom binary handshake; `AUTH_LOGIN` with operator tag and browser inventory; command-dispatch loop; reconnect with backoff on close.
 
 **Stage 5 (thread) -- Browser Lifecycle:** Detect installed browser; write bounce HTML; for Firefox, patch `prefs.js`; launch the browser with suppression flags (Chromium) or `-new-instance -no-remote` (Firefox); poll for hot-swap commands.
 
@@ -685,11 +685,11 @@ The log string `[INIT] Agent already running. Exiting.` and the single-instance 
 
 As of 2026-05-19, the string `StudioSecGhost` does not appear in any public threat intelligence source. The companion strings `StudioSecVNC_Banner`, `.SecAnchor`, and `ssv_cleanup.bat` also return zero results. MalwareBazaar carries the SHA-256 but lists it as `Threat unknown`; multi-engine sandbox detections use generic labels (`Trojan.Win64.*`, `HVNC.Generic`) rather than a family name. This post therefore names the family from the binary's own internal marker: **StudioSecGhost**.
 
-**Delivery context (not family attribution).** MalwareBazaar metadata associates this SHA-256 with `dropped-by-amadey` and exposes a web-download source URL of the form `http://91.92.242.236/files-129312398/files/file_e353c81a9a32e76e.exe`. This indicates Amadey (a well-known commodity loader) was observed delivering the agent in at least one campaign, but it does **not** make StudioSecGhost part of the Amadey family -- Amadey is the loader, StudioSecGhost is the post-loader payload. Treat the relationship as a delivery pairing only.
+**Delivery context (not family attribution).** MalwareBazaar metadata associates this SHA-256 with `dropped-by-amadey` and exposes a web-download source URL of the form `hxxp://91.92.242[.]236/files-129312398/files/file_e353c81a9a32e76e.exe`. This indicates Amadey (a well-known commodity loader) was observed delivering the agent in at least one campaign, but it does **not** make StudioSecGhost part of the Amadey family -- Amadey is the loader, StudioSecGhost is the post-loader payload. Treat the relationship as a delivery pairing only.
 
 **No encryption in the wire protocol.** The agent communicates over raw TCP with no TLS wrapper, no symmetric encryption, and no challenge-response key exchange. Every frame and every command is transmitted in plaintext. This is unusual for a tool that is otherwise carefully designed.
 
-**C2 infrastructure.** The single observed C2 IP, `2.26.122.211`, is announced by AS201988 (VPSPay, Helsinki, Finland). The abuse contact for the ASN is `abuse@vpspay.cloud`. Independent reputation history for this ASN is not asserted here; treat the IP as a single-VPS pivot point only. The destination port is **TCP/4444**, recovered statically from `.text` as the immediate operand of `mov ebx, 0x115c` at VA `0x140005DEC` (full validation chain in **Methodology and Toolchain**). The wide-string config extractor did not surface the port because it is not stored as a wide string in `.rdata` -- it lives as a code-section immediate. The disassembly pass picked it up directly.
+**C2 infrastructure.** The single observed C2 IP, `2.26.122[.]211`, is announced by AS201988 (VPSPay, Helsinki, Finland). The abuse contact for the ASN is `abuse@vpspay[.]cloud`. Independent reputation history for this ASN is not asserted here; treat the IP as a single-VPS pivot point only. The destination port is **TCP/4444**, recovered statically from `.text` as the immediate operand of `mov ebx, 0x115c` at VA `0x140005DEC` (full validation chain in **Methodology and Toolchain**). The wide-string config extractor did not surface the port because it is not stored as a wide string in `.rdata` -- it lives as a code-section immediate. The disassembly pass picked it up directly.
 
 **Operator-tag naming.** The `AUTH_LOGIN` packet includes an `operator tag` field (`[NET] AUTH_LOGIN sent: '%ls'`). This suggests a panel-based C2 with named operator accounts -- consistent with a for-hire or multi-operator model rather than a single-actor tool.
 
@@ -703,11 +703,11 @@ As of 2026-05-19, the string `StudioSecGhost` does not appear in any public thre
 
 After the static writeup was completed, public sandbox coverage appeared for the same SHA-256. The sandbox results do not provide a stable family name; MalwareBazaar lists the sample as `Threat unknown`, and vendor labels remain generic. The dynamic data does, however, corroborate several of the static-analysis findings, raising the confidence level on each from single-method (disassembly) to dual-method (disassembly + runtime telemetry):
 
-- **C2 confirmed.** `ahy.exe` contacts `2.26.122.211:4444` over TCP at runtime, matching both the statically recovered IP (`.rdata` literal at VA `0x140049BB8`) and the port (`mov ebx, 0x115c` at VA `0x140005DEC`).
+- **C2 confirmed.** `ahy.exe` contacts `2.26.122[.]211:4444` over TCP at runtime, matching both the statically recovered IP (`.rdata` literal at VA `0x140049BB8`) and the port (`mov ebx, 0x115c` at VA `0x140005DEC`).
 - **Browser profile access confirmed.** The process accesses Chrome profile paths under `%LOCALAPPDATA%\Google\Chrome\User Data\...`, including the bounce HTML drop at `%LOCALAPPDATA%\Google\Chrome\User Data\chrome_update_manifest.html` and reads against `Default\Preferences`. This supports the browser-profile piggybacking model: the launched browser process uses the victim's existing User Data profile.
 - **Bounce HTML title confirmed.** Runtime strings expose `<title>StudioSecGhost</title>` in the dropped HTML, matching the static finding that this is both the search target for the ghost-window acquisition loop and the family's internal codename.
 - **Scheduled-task XML staging confirmed; task names differ from filenames.** `%TEMP%\chrome_task_<random>.xml` is written and consumed by `schtasks /Create /XML`. The observed task entries, however, use camouflage names: `Google\Update\CrashReportTask`, `Microsoft\Windows\DeviceSync\Routine`, and repeated `schtasks /Query` against `Microsoft\Windows\AppID\PolicyConverter`. The original draft conflated the XML staging filename with the task name; this is now corrected in the **Persistence** section and the **IOC Appendix**.
-- **Delivery via Amadey observed.** MalwareBazaar tags the sample `dropped-by-amadey` with a delivery URL of `http://91.92.242.236/files-129312398/files/file_e353c81a9a32e76e.exe`. Treat as delivery context, not family attribution.
+- **Delivery via Amadey observed.** MalwareBazaar tags the sample `dropped-by-amadey` with a delivery URL of `hxxp://91.92.242[.]236/files-129312398/files/file_e353c81a9a32e76e.exe`. Treat as delivery context, not family attribution.
 
 The article keeps its MITRE ATT&CK table restricted to behavior directly supported by static reversing or corroborated runtime telemetry. Generic sandbox-mapped techniques (every API category mechanically mapped to an ATT&CK ID) are not imported wholesale.
 
@@ -715,11 +715,11 @@ The article keeps its MITRE ATT&CK table restricted to behavior directly support
 
 ## Code Weaknesses
 
-1. **No wire encryption.** All C2 traffic -- auth tokens, operator commands, JPEG frames, file payloads -- transits in cleartext over raw TCP. A network tap or MITM between the agent and `2.26.122.211` exposes the full session without any decryption step.
+1. **No wire encryption.** All C2 traffic -- auth tokens, operator commands, JPEG frames, file payloads -- transits in cleartext over raw TCP. A network tap or MITM between the agent and `2.26.122[.]211` exposes the full session without any decryption step.
 
 2. **Plaintext config in `.rdata`.** Every operational string (C2 IP format, log prefixes, browser paths, window class names, task XML filename template, cleanup batch name) is stored as unencrypted UTF-16LE. A `strings -e l` run on the binary recovers the entire config without executing a single instruction.
 
-3. **Hardcoded C2 IP.** The IP `2.26.122.211` appears verbatim in `.rdata`. A single takedown of the VPS severs every deployed instance simultaneously. There is no DGA, no backup domain, and no fast-flux mechanism.
+3. **Hardcoded C2 IP.** The IP `2.26.122[.]211` appears verbatim in `.rdata`. A single takedown of the VPS severs every deployed instance simultaneously. There is no DGA, no backup domain, and no fast-flux mechanism.
 
 4. **Process-name blocklist as the only anti-analysis gate.** The check is trivially bypassed by renaming the analyst tool executable. `x64dbg_renamed.exe` would not match. The blocklist also does not cover a number of common analysis tools: WireShark, Fiddler, API Monitor, Cutter, Binary Ninja, PE-bear.
 
@@ -743,12 +743,12 @@ The article keeps its MITRE ATT&CK table restricted to behavior directly support
 
 | Type | Value | Notes |
 |---|---|---|
-| IP | `2.26.122.211` | C2; AS201988 (VPSPay, Helsinki, FI). Corroborated by public sandbox telemetry. |
+| IP | `2.26.122[.]211` | C2; AS201988 (VPSPay, Helsinki, FI). Corroborated by public sandbox telemetry. |
 | Port | TCP/4444 | Hardcoded in `.text` as `mov ebx, 0x115c` at VA `0x140005DEC`. Corroborated by public sandbox telemetry. |
-| ASN | AS201988 | VPSPay / vpspay.cloud |
+| ASN | AS201988 | VPSPay / vpspay[.]cloud |
 | Protocol | Raw TCP, custom binary, no TLS | 1-byte opcode header, length-prefix framing |
-| Abuse contact | `abuse@vpspay.cloud` | |
-| Delivery URL (observed) | `http://91.92.242.236/files-129312398/files/file_e353c81a9a32e76e.exe` | Web-download stage observed in MalwareBazaar metadata; tagged `dropped-by-amadey`. Delivery context only. |
+| Abuse contact | `abuse@vpspay[.]cloud` | |
+| Delivery URL (observed) | `hxxp://91.92.242[.]236/files-129312398/files/file_e353c81a9a32e76e.exe` | Web-download stage observed in MalwareBazaar metadata; tagged `dropped-by-amadey`. Delivery context only. |
 
 ### File and Registry
 
