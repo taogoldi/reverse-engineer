@@ -1,0 +1,38 @@
+# Sidebar contact / social icons.
+#
+# Chirpy's gemspec ships only _data/locales and _data/origin, so this file has
+# to live in the site repo. Without it site.data.contact is empty and the
+# sidebar-bottom renders with no icons at all.
+#
+# github and twitter read their handle from site.github.username /
+# site.twitter.username in _config.yml; email reads site.social.email. An entry
+# whose source value is missing is skipped silently, so the two commented-out
+# blocks below light up on their own once those keys are filled in.
+
+- type: github
+  icon: "fab fa-github"
+
+- type: rss
+  icon: "fas fa-rss"
+  noblank: true # open link in current tab
+
+# Requires `twitter: {username: <handle>}` in _config.yml
+# - type: twitter
+#   icon: "fa-brands fa-x-twitter"
+
+# Requires `social: {email: <address>}` in _config.yml
+# - type: email
+#   icon: "fas fa-envelope"
+#   noblank: true
+
+# - type: linkedin
+#   icon: "fab fa-linkedin"
+#   url: ""
+
+# - type: mastodon
+#   icon: "fab fa-mastodon"
+#   url: ""   # rel="me" is applied automatically for verification
+
+# - type: bluesky
+#   icon: "fa-brands fa-bluesky"
+#   url: ""
