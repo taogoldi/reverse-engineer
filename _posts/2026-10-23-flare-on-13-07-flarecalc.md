@@ -4,26 +4,33 @@ permalink: /blog/flare-on-13-07-flarecalc/
 date: 2026-10-23 12:07:00 +0000
 categories: [ctf, flare-on]
 tags: [flare-on, flare-on-13, ctf, reverse-engineering, authenticode, asn1, unicorn]
-description: "A 1.5 MB Windows calculator. The calculator is bait. The actual challenge is a 517 KB implant smuggled inside the executable's Authenticode signature, where it is never mapped into memory and never touched by the..."
+description: "Flare-On is the FLARE team's yearly reverse-engineering contest: each challenge hides a flag, a string ending in @flare-on.com, and you find it by taking the program apart."
 render_with_liquid: false
 ---
 **Archive:** `7-FlareCalc.7z` (password `flare`), containing `FlareCalc.exe` · **Flag:** `t3mplat3s_asn_and_j1t_0h_my@flare-on.com`
 
-A 1.5 MB Windows calculator. The calculator is bait. The actual challenge is a
-517 KB implant smuggled **inside the executable's Authenticode signature**, where
-it is never mapped into memory and never touched by the program you can run.
+Flare-On is the FLARE team's yearly reverse-engineering contest: each challenge hides a flag, a string
+ending in `@flare-on.com`, and you find it by taking the program apart.
 
-Inside that signature sit 1,035 records: one plaintext shellcode loader, one
-40-byte ciphertext, and 1,033 tiny functions that are individually encrypted,
+This one is a 1.5 MB Windows calculator. The calculator is bait. The actual challenge is a
+517 KB implant smuggled **inside the executable's Authenticode signature**, the code-signing block Windows
+reads to show who published a program. There it is never mapped into memory and never touched by the
+program you can run.
+
+Inside that signature sit 1,035 records: one plaintext shellcode loader (shellcode is raw machine code
+built to run without a normal program around it), one 40-byte ciphertext, and 1,033 tiny functions that are individually encrypted,
 padded with junk bytes, and executed one at a time from a scratch page that gets
-wiped afterward. Together they're a state machine whose final state is the key
-to the flag.
+wiped afterward. Together they're a state machine, a program that moves from one state to the next on each input byte,
+and its final state is the key to the flag.
 
 The useful part of this one, for me, was learning to stop tuning a heuristic and
 go recover the generator sitting behind it. Accepting that took longer than doing
 it.
 
 ## Tools I used
+
+Python for parsing, a disassembler (which turns machine code into readable assembly) and an emulator for
+running the small functions without Windows:
 
 | Tool | What I used it for |
 |---|---|
@@ -81,13 +88,15 @@ The chain is a joke in itself: **FLARE-ON Root CA** issues to **Never Gonna Let
 You Down**, which issues to **Never Gonna Give You Up**, also styled the
 *Flare-On Code Signing Authority*.
 
-The leaf certificate carries a 526 KB extension under the private OID
+Certificates are stored in DER, a compact binary encoding, and every field is named by an OID (object
+identifier), a dotted number. The leaf certificate carries a 526 KB extension under the private OID
 **1.3.6.1.4.1.1337.1**. Its value is a `SEQUENCE` of 1,035 entries, each a
 `SEQUENCE { INTEGER id, OCTET STRING data }`. The record ids are 16-bit values
 scattered between 49 and 65,469. Not sequential, which matters later.
 
 Exactly one record, id **3821**, is plain x86-64: position-independent shellcode
-that walks the PEB to find module bases and resolves exports by a 64-bit hash.
+that walks the PEB (the process's own list of loaded modules) to find module bases, and resolves the
+Windows functions it needs by a 64-bit hash of their names instead of storing the names.
 
 <img src="/assets/images/posts/flare-on-13/07-flarecalc-1.svg" alt="FlareCalc: where the implant lives and how a record is packed">
 
@@ -158,8 +167,8 @@ hash list with decoys.
 
 ## How a record is packed
 
-Two layers, both driven by the same classic LCG,
-`state = state * 1103515245 + 12345`.
+Two layers, both driven by the same classic LCG (linear congruential generator: multiply the state by one
+constant, add another, repeat), `state = state * 1103515245 + 12345`.
 
 **Layer 1: keystream XOR.** The key is `MD5(master_key || record_id)`, reduced
 to a 32-bit seed by `h = h*31 + byte`, and each output byte is the low byte of
@@ -242,8 +251,8 @@ always sit at the same offsets, in every record. Every record then decodes
 exactly. 1,034 come out as clean x86-64 functions ending in `ret`; the odd one
 out, id 9990, is 40 bytes of data.
 
-**When a decode is heuristic and the result is almost right, recover the
-generator instead of tuning the heuristic.** An "almost right" decode is not
+When a decode is heuristic and the result is almost right, recover the
+generator instead of tuning the heuristic. An "almost right" decode is not
 nearly-solved. It's a different problem that happens to look similar, and no
 amount of scoring closes the gap.
 
@@ -269,9 +278,9 @@ xor  eax, ecx
 ret
 ```
 
-That delay loop is pure anti-emulation: a million iterations per function,
-1,034 functions, 31 steps of search depth, times 256 candidate bytes. Under
-Unicorn that's unfinishable. Short-circuit the loop (the sum is a constant, and
+That delay loop is pure anti-emulation, code whose only job is to make running it in an emulator too slow
+to be useful: a million iterations per function, 1,034 functions, 31 steps of search depth, times 256
+candidate bytes. Under Unicorn, the CPU emulator I was running these functions in, that's unfinishable. Short-circuit the loop (the sum is a constant, and
 the very next instruction subtracts it straight back off) and the whole search
 takes seconds.
 
@@ -324,7 +333,7 @@ flowchart TD
 
 ## The flag
 
-Record 4485 is XTEA. Its key is sixteen bytes: the second half of the final state
+Record 4485 is XTEA, a small and old block cipher. Its key is sixteen bytes: the second half of the final state
 XORed with the first half, taken as little-endian 32-bit words. It runs 32 rounds
 with the usual delta `0x9E3779B9`, on big-endian blocks, over the 40 bytes of
 record 9990:

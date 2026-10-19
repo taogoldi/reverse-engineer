@@ -4,13 +4,16 @@ permalink: /blog/flare-on-13-06-threatinvaders/
 date: 2026-10-23 12:06:00 +0000
 categories: [ctf, flare-on]
 tags: [flare-on, flare-on-13, ctf, reverse-engineering, dotnet, pcap, c2]
-description: "A 116 MB Space Invaders clone and a packet capture of it talking to a highscore server. Here is the shape of this challenge in one sentence: the managed game is entirely clean, and proving that is most of the work."
+description: "Flare-On is the FLARE team's yearly reverse-engineering contest: each challenge hides a flag, a string ending in @flare-on.com, and you find it by taking the program apart."
 render_with_liquid: false
 ---
 **Archive:** `6-ThreatInvaders.7z` (password `flare`), containing `ThreatInvaders.exe` and `challenge.pcapng` · **Flag:** `wh4t_4_l0ng_str4ng3_tr1p_1ts_b33n@flare-on.com`
 
-A 116 MB Space Invaders clone and a packet capture of it talking to a highscore
-server. Here is the shape of this challenge in one sentence: **the managed game
+Flare-On is the FLARE team's yearly reverse-engineering contest: each challenge hides a flag, a string
+ending in `@flare-on.com`, and you find it by taking the program apart.
+
+This one is a 116 MB Space Invaders clone and a packet capture (a recording of network traffic) of it
+talking to a highscore server. Here is the shape of this challenge in one sentence: **the managed game
 is entirely clean, and proving that is most of the work.**
 
 Every bundled framework assembly is a genuine signed Microsoft build. The game's
@@ -18,9 +21,17 @@ own 4,929 lines of C# contain three separate things that look exactly like the
 payload and aren't. The actual implant is in the **native host**: the .NET
 single-file launcher has been patched to hook five managed methods at JIT time.
 
+Some background for that sentence. A .NET program ships as *assemblies*, libraries compiled to an
+intermediate language (IL) rather than to machine code. The runtime's JIT compiler turns each method into
+machine code the first time it runs. "Managed" code is the IL side; the "native host" is the ordinary
+machine-code program that starts the runtime.
+
 And then everything you need is in the capture, so nothing has to be run.
 
 ## Tools I used
+
+A .NET decompiler for the game, a disassembler (which turns machine code into readable assembly) for the
+native host, and Python for the rest:
 
 | Tool | What I used it for |
 |---|---|
@@ -35,8 +46,9 @@ And then everything you need is in the capture, so nothing has to be run.
 
 ## Unpacking the bundle
 
-`ThreatInvaders.exe` is a .NET 10 self-contained single-file bundle: a 10 MB
-native host followed by a 106 MB overlay. The bundle header is located from a
+`ThreatInvaders.exe` is a .NET 10 self-contained single-file bundle, one executable that carries the
+runtime and every library it needs: a 10 MB native host followed by a 106 MB overlay (data appended after
+the program itself). The bundle header is located from a
 fixed 32-byte signature:
 
 ```
@@ -74,7 +86,7 @@ buffer and a raw `Comment` pointer into a manually allocated arena. It is
 
 **`TelemetryReporter`** base64-encodes a fixed 4,096-byte buffer regardless of
 how short the actual feedback is. That's the textbook shape of an
-uninitialised-memory leak, Heartbleed-style. Except this is managed code, where
+uninitialized-memory leak, Heartbleed-style. Except this is managed code, where
 arrays are zero-filled on allocation, so it leaks precisely nothing. (It becomes relevant
 later, but not for that reason.)
 
@@ -88,7 +100,8 @@ later, but not for that reason.)
 An explicit troll, and I appreciated it.
 
 Then there were the 251 bundled framework assemblies, which is where a
-trojanized DLL would be an excellent place to hide. Rather than eyeball them I
+trojanized DLL would be an excellent place to hide. Authenticode is Microsoft's code-signing format: the
+signature covers a hash of the file, so a modified DLL stops matching it. Rather than eyeball them I
 wrote an Authenticode check: recompute each PE hash (skipping the checksum
 field, the security data-directory entry, and the certificate table) and confirm
 the result appears inside the signature blob.
@@ -101,7 +114,7 @@ actually starts.
 ## The grep that cracked it
 
 I ran `strings` over the native host looking for anything that didn't belong in
-a stock CoreCLR, and found this:
+a stock CoreCLR (the .NET runtime itself, linked into the host), and found this:
 
 ```
 TieredCompilationManager::DoBackgroundWork: ...
@@ -121,7 +134,8 @@ grep the native parts for identifiers that only exist in the managed parts.
 ## The hook machinery
 
 One code path references that string, and it's inside the tiered-compilation
-path:
+path, the part of the runtime that decides when each method gets compiled and recompiled. A `MethodDesc`
+is the runtime's record for one method:
 
 ```asm
 cmp  qword ptr [rip+...], r15      ; is the global slot still empty?
@@ -167,7 +181,7 @@ and this is it.
 
 The other four hooks don't use a literal at all. They match a **64-bit hash** of
 the name, which is why only one of the five showed up in `strings`. The hash is a
-mutating-multiplier variant of FNV:
+mutating-multiplier variant of FNV, a simple and well-known string hash:
 
 ```python
 MASK = 0x8f3a2c91d7b4e6a5
@@ -199,13 +213,13 @@ obscurity; you get a dictionary attack with a dictionary of size 5,000.
 | `0x322131f288b022a7` | `ReplaceHighscores` |
 | `0xce723a0a685e63e4` | `cmd:` |
 
-The patch sits at the **tail of the prestub**, after the JIT has produced native
-code. It saves the original code pointer in a global and substitutes the address
+The patch sits at the **tail of the prestub**, the stub a method runs on its first call to get itself
+compiled, after the JIT has produced native code. It saves the original code pointer in a global and substitutes the address
 of a replacement, so the managed caller transparently lands in the implant. Each
 replacement reaches the original through a small trampoline that shifts the
 arguments back and jumps to the saved pointer.
 
-Hooking at JIT time is a good trick. There's no IAT patch, no detour in the
+Hooking at JIT time is a good trick. There's no IAT patch (rewriting the table of imported functions), no detour in the
 managed code, no modified IL, and nothing for a managed-code integrity check to
 catch. The IL on disk is pristine. The native code the JIT produced for it just
 never gets called.
@@ -261,7 +275,7 @@ the capture:
 "BENI" ^ 0x732A2821 -> "cmd:"      (player BENIGN, score 1932142625)
 ```
 
-I like this a lot as a C2 channel. The marker is the XOR of a player name and
+I like this a lot as a C2 channel (command and control, the way an implant receives its orders). The marker is the XOR of a player name and
 their score, so both halves are innocuous on their own, the board renders
 normally, and the server needs no side channel at all.
 
@@ -310,7 +324,8 @@ keystream_byte = state >> 56
 Those are recognizable constants if you've seen them before: `0x9e3779b97f4a7c15`
 is the 64-bit golden ratio (it's `boost::hash_combine`), `fmix64` is
 MurmurHash3's finalizer, and `0x5851f42d4c957f2d` / `0x14057b7ef767814f` are
-**PCG**'s 64-bit LCG constants. Taking only the top byte of the state is PCG-ish
+**PCG**'s 64-bit LCG constants (a linear congruential generator: multiply the state by one constant, add
+another, repeat). Taking only the top byte of the state is PCG-ish
 too, since it's the high bits that are well-mixed in an LCG.
 
 That is a paraphrase in Python. Here is the routine itself, at `0x1400c65e0`,
@@ -427,8 +442,8 @@ payload = frame[tcp_header_end:end]
 
 With that, all 203 requests appear, including the five `POST /api/v1/telemetry`.
 
-**When reassembled request and response counts disagree, suspect the reassembler
-before you conclude the capture is incomplete.** Captures taken on an endpoint
+So when reassembled request and response counts disagree, suspect the reassembler
+before you conclude the capture is incomplete. Captures taken on an endpoint
 rather than on the wire routinely contain frames that violate what the IP header
 says, because offload means the final packet never existed in that form in
 software.
@@ -509,7 +524,7 @@ The full solver is in the [flare-on-13 repository](https://github.com/taogoldi/f
 
 ## What I'd take away
 
-Three layers each look like the answer and are not: the fake uninitialised-memory
+Three layers each look like the answer and are not: the fake uninitialized-memory
 leak, the troll flag in `UpdateLauncher`, and the deliberately native-looking
 `HighscoreStruct` arena. Confirming all three are benign isn't wasted work; it's
 what forces you out of the managed code and into the host binary, which is the
@@ -522,7 +537,7 @@ Two checks did almost all of the real work:
 - Grepping the native host for **managed** identifiers found the implant
   immediately.
 
-That second one generalises. In any mixed-language artifact (a .NET bundle, a
+That second one generalizes. In any mixed-language artifact (a .NET bundle, a
 Java fat jar with JNI, an Electron app, a Python app with native extensions),
 look for names that have crossed a layer boundary they had no business crossing.
 Strings that belong to one layer and appear in another are almost always

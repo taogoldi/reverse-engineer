@@ -4,20 +4,27 @@ permalink: /blog/flare-on-13-05-catthief/
 date: 2026-10-23 12:05:00 +0000
 categories: [ctf, flare-on]
 tags: [flare-on, flare-on-13, ctf, reverse-engineering, rust, pcap, huffman]
-description: "A Rust exfiltration tool plus a 15 MB packet capture of it running. The tool steals cat pictures and POSTs them to a listener. The flag is written on a scroll in one of the pictures, so the whole challenge is really..."
+description: "Flare-On is the FLARE team's yearly reverse-engineering contest: each challenge hides a flag, a string ending in @flare-on.com, and you find it by taking the program apart."
 render_with_liquid: false
 ---
 **Archive:** `5-catthief.7z` (password `flare`), containing `catthief.exe` and `capture.pcapng` · **Flag:** `th3r3_b3_tr34sure_1n_th4t_pc4p@flare-on.com`
 
-A Rust exfiltration tool plus a 15 MB packet capture of it running. The tool
-steals cat pictures and POSTs them to a listener. The flag is written on a
+Flare-On is the FLARE team's yearly reverse-engineering contest: each challenge hides a flag, a string
+ending in `@flare-on.com`, and you find it by taking the program apart.
+
+This one is a Rust exfiltration tool (a program that copies data off a machine to someone else's server)
+plus a 15 MB packet capture, a recording of the network traffic while it ran. The tool steals cat pictures
+and uploads them to a listener in HTTP POST requests. The flag is written on a
 scroll in one of the pictures, so the whole challenge is really one task: reverse
 the wire format well enough to get the images back out of the capture.
 
-Three layers. RC4, then a container format I hadn't seen before and haven't seen
-since, then canonical Huffman. The middle one is the point of the challenge.
+Three layers. RC4, a stream cipher, then a container format I hadn't seen before and haven't seen
+since, then canonical Huffman, a compression scheme that gives common bytes short bit codes. The middle
+one is the point of the challenge.
 
 ## Tools I used
+
+Mostly packet tools and a disassembler, which turns machine code back into readable assembly:
 
 | Tool | What I used it for |
 |---|---|
@@ -31,8 +38,8 @@ since, then canonical Huffman. The middle one is the point of the challenge.
 
 ## The binary
 
-`catthief.exe` is Rust, linking `ureq` 2.12.1, `rustls`, `base64`, `flate2` and
-`url`. The target sits in plain text right next to a `READY` marker and a source
+`catthief.exe` is written in Rust and links the `ureq` 2.12.1 HTTP client, `rustls` (TLS),
+`base64`, `flate2` (deflate compression) and `url`. The target sits in plain text right next to a `READY` marker and a source
 path:
 
 ```
@@ -48,10 +55,11 @@ just deflate" was my first and wrong theory about the payload.
 
 ### Navigating stripped Rust
 
-Stripped Rust is miserable to read: no symbols, heavy inlining, iterator chains
+Stripped Rust (a binary with its function names removed) is miserable to read: no symbols, heavy inlining, iterator chains
 expanded into loops you won't recognize. But it hands you one good hook for free.
 
-Every panic site carries a `core::panic::Location` struct, which is a pointer to
+Every panic site, a place where Rust aborts on an error such as an out-of-range index, carries a
+`core::panic::Location` struct, which is a pointer to
 the source file name plus a line and column. So:
 
 1. Find the `src\compress.rs` string.
@@ -64,7 +72,8 @@ I needed.
 
 ## The capture
 
-Reassembling TCP by sequence number gives six POST bodies:
+Reassembling TCP by sequence number (stitching the packets back into the original byte streams) gives six
+POST bodies:
 
 | Body | Size | Content |
 |---|---|---|
@@ -76,13 +85,19 @@ start with the same bytes and stay nearly identical for the first ~120 bytes.
 Bodies 1–5 differ from each other in only a handful of bits. Body 0 differs from
 them by about **one bit in almost every byte**.
 
+A stream cipher XORs every byte of the message with a byte from a keystream generated from the key.
+Encrypt two messages with the same key and they get the same keystream, so wherever the plaintexts match,
+the ciphertexts match too.
+
 That is textbook **keystream reuse**: a single key, applied to plaintexts that
 share a long prefix. A stream cipher, one fixed key, no nonce. Which meant I was
 looking for RC4 or similar before I'd read a single instruction.
 
 ## Layer 1: RC4
 
-Two routines sit next to each other in the binary:
+RC4 has two halves: a key schedule (KSA) that shuffles a 256-byte table using the key, and an output loop
+(PRGA) that keeps shuffling the table and emits one keystream byte per step. Two routines sit next to each
+other in the binary:
 
 - `0x1400052e2` fills an identity table, then loops `j += S[i] + key[i mod 25]`
   with a swap. The `div bl` with `bl = 25` and the `imul eax, eax, -0x19`
@@ -91,7 +106,8 @@ Two routines sit next to each other in the binary:
   `k = S[(S[i]+S[j]) & 0xff]`, XOR into the buffer.
 
 Textbook RC4 with a **25-byte key**. I read both rather than pattern-matching
-them, then ran a known-answer test against a reference implementation, because
+them, then ran a known-answer test against a reference implementation (encrypting the same input with both and
+comparing), because
 by challenge 5 I had been burned by a "textbook" hash in challenge 4.
 
 The Ghidra decompiler plugin in `radare2` (`r2ghidra`) shows both halves
@@ -166,7 +182,7 @@ xor    byte [rbp+rax+0x9f7], 0x33     ; XOR all 25 bytes with 0x33
 i11_b3_p1und3r1n_y3r_d474        ("I'll be plundering your data")
 ```
 
-Splitting a key across a 16-byte SSE load, an 8-byte immediate and a single
+Splitting a key across a 16-byte SSE register load, an 8-byte immediate and a single
 `mov byte` is a nice touch. No 25-byte run of anything appears in the file, so
 there's nothing for an entropy scan or a string search to catch.
 
@@ -247,6 +263,10 @@ guess a byte-aligned header you get garbage with no clue why.
 
 ## Layer 3: canonical Huffman
 
+Huffman coding builds a binary tree with frequent bytes near the root; a byte's code is its path from the
+root, so its code length is its depth. "Canonical" means only those lengths are stored, and both sides
+rebuild the codes from them by a fixed rule.
+
 `0x1400053ab` is a recursive tree walk that writes one code length per symbol
 into a 256-entry table, incrementing depth on each descent. The codes are
 canonical: symbols sorted by `(length, symbol)`, code starts at zero,
@@ -292,7 +312,8 @@ Body 0's code-length table has exactly five non-zero entries:
 | `A` (65) | 3 |
 | `E` (69) | 3 |
 
-Check the Kraft sum: `2⁻² × 3 + 2⁻³ × 2 = 0.75 + 0.25 = 1.0` **exactly**. A
+Check the Kraft sum (for a complete prefix code, `2^-length` over all symbols must add up to exactly 1):
+`2⁻² × 3 + 2⁻³ × 2 = 0.75 + 0.25 = 1.0` **exactly**. A
 complete, valid prefix code. Canonical assignment gives
 
 ```

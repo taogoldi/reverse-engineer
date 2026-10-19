@@ -12,10 +12,15 @@ render_with_liquid: false
 I submitted the wrong flag for this one. That's going at the top rather than the
 bottom, because it's the most useful thing in the write-up.
 
-`neon_outrun` is a 21 MB stripped Linux x86-64 PIE. It's a **Tauri v2** desktop
-app (`NEEDED` lists `libwebkit2gtk-4.1`, `libgtk-3` and `libsoup-3.0`) whose front
+(Flare-On is the FLARE team's yearly reverse-engineering contest: each challenge hides a flag, a string
+ending in `@flare-on.com`, and you find it by taking the program apart. This was the last challenge of the
+set.)
+
+`neon_outrun` is a 21 MB Linux x86-64 program, stripped of its function names and built as a PIE
+(position-independent executable, loadable at any address). It's a **Tauri v2** desktop app, a framework
+whose interface is a web page shown in an embedded browser (`NEEDED` lists `libwebkit2gtk-4.1`, `libgtk-3` and `libsoup-3.0`) whose front
 end is a top-down racing game. On top of that it statically links **an entire
-V8** (the `rusty_v8` crate, V8 9.5.172.19), which is where 15 MB of `.text` and
+V8**, Google's JavaScript engine, (the `rusty_v8` crate, V8 9.5.172.19), which is where 15 MB of `.text` and
 a 2 MB pile of V8 strings come from.
 
 ![Neon OutRun: 28 laps, arrow keys, R to restart](/assets/images/posts/flare-on-13/09-game.png)
@@ -30,6 +35,8 @@ It has three layers, and the first two are traps:
    sequence of lap times those hooks are waiting for.
 
 ## Tools I used
+
+Binary tools for the Linux executable, a container to run it in safely, and a lot of memory reading:
 
 | Tool | What I used it for |
 |---|---|
@@ -51,9 +58,9 @@ embedded assets replaced.
 
 ## Layer 1: the game
 
-Tauri embeds the front end as a `phf` map of brotli blobs. You don't have to
-understand `phf` to get at them: walk the relocations in `.data.rel.ro` looking
-for `(ptr, len)` pairs whose target is an ASCII path, and the whole asset table
+Tauri embeds the front end as a `phf` map (a lookup table built at compile time) of brotli-compressed
+files. You don't have to understand `phf` to get at them: walk the relocations in `.data.rel.ro` (the
+table of addresses the loader fixes up at startup) looking for `(ptr, len)` pairs whose target is an ASCII path, and the whole asset table
 falls out at once.
 
 ```
@@ -152,8 +159,8 @@ neither plaintext nor a compressed stream. There is no signature to scan for.
 What cracked it was going at the *loader* instead. Exactly one function
 references both the `rusty_v8` panic strings and the string `"zstd returned null
 pointer when creating new context"`: `sub_688C64`, 16,848 bytes, reached from
-`main` through an 8-byte thunk. It's control-flow flattened and unpleasant, but
-one loop in the middle is in the clear:
+`main` through an 8-byte thunk. It's control-flow flattened (an obfuscation that turns a function into one big loop around a switch, so
+the real order of its steps is hidden) and unpleasant, but one loop in the middle is in the clear:
 
 ```asm
 lea   rcx, [rip - 0x46c2b2]              ; -> .rodata:0x21DB73
@@ -179,9 +186,10 @@ doesn't work: **`gdb` cannot `PTRACE_GETREGS` an amd64 process under Docker's
 emulation on Apple silicon.** The process runs; the debugger cannot see its
 registers.
 
-So I wrote an `LD_PRELOAD` shim over `malloc`/`free`/`realloc` that remembers
+So I wrote an `LD_PRELOAD` shim over `malloc`/`free`/`realloc`: a small library the Linux loader puts
+ahead of everything else, so its versions of those functions run instead of the real ones. It remembers
 every 1,942-byte allocation and dumps it a few allocations later (you can't dump
-it immediately, since at the moment of allocation it's still uninitialised).
+it immediately, since at the moment of allocation it's still uninitialized).
 
 Two bugs on the way, both the kind that only bite inside an allocator hook:
 
@@ -202,8 +210,8 @@ ff 28 b5 2f fd 00 68 a9 35  ff 00 ad 57 6d 6f e3 36 12  ff fe 2b ac 3f ec 4a …
 
 `28 B5 2F FD` is the zstd magic. And **every 9th byte is `0xFF`**.
 
-That is byte stuffing, and it is a known plaintext. The key falls out
-immediately:
+That is byte stuffing, a fixed byte inserted at fixed intervals. Because I knew what those bytes had to be
+before the XOR, they are a known plaintext, and the key falls out immediately:
 
 ```
 key0 = blob[0] ^ 0xFF = 0xD3
@@ -215,8 +223,8 @@ knowing the offset by scanning for "XOR with a 2-byte key such that every 9th
 byte is `0xFF`," and it finds **exactly one**, which also proves there is no
 second payload hiding anywhere.
 
-**When content-based search fails, look for a known-plaintext structure in the
-container rather than in the payload.** I was searching for the shape of the
+So when content-based search fails, look for a known-plaintext structure in the
+container rather than in the payload. I was searching for the shape of the
 *data*. The thing that was findable was the shape of the *wrapper*.
 
 <img src="/assets/images/posts/flare-on-13/09-neonoutrun-2.svg" alt="the four-stage packer">
@@ -250,7 +258,7 @@ A dead end, on purpose, with the fake flag telling you to walk down it.
 
 ## Layer 3: the hooks
 
-`sub_688C64` builds its strings the way `obfstr` does: two heap buffers filled
+`sub_688C64` builds its strings the way the `obfstr` Rust crate does: two heap buffers filled
 from immediates and XORed together. You don't have to follow the control flow at
 all: extract every such pair statically and the function's whole vocabulary falls
 out.
@@ -335,7 +343,7 @@ with no readable body at all, and its decompilation jumps straight into
 `0x67F9D8`, the first of the two functions I measured instead of read.
 
 One more thing the decompiler showed me in the `sort` hook: the random scale
-`K` comes from a 64-bit LCG with multiplier `0x5851f42d4c957f2d` and increment
+`K` comes from a 64-bit LCG (linear congruential generator, multiply-and-add) with multiplier `0x5851f42d4c957f2d` and increment
 `0x14057b7ef767814f`. Each draw adds the current time in nanoseconds (or 42, if
 reading the clock fails) to a thread-local state that starts at
 `0x123456789abcdef0`, then steps the LCG. Those are the same PCG constants as the keystream in challenge
