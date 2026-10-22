@@ -6,6 +6,7 @@ categories: [ctf, flare-on]
 tags: [flare-on, flare-on-13, ctf, reverse-engineering, javascript, web]
 description: "Flare-On is a yearly reverse-engineering contest: you take programs apart to work out what they really do, and each challenge hides a flag, a string ending in @flare-on.com, that unlocks the next one. (Contests built..."
 render_with_liquid: false
+mermaid: true
 ---
 **Archive:** `1-flarecaptcha.7z` (password `flare`) · **Flag:** `triskaidekaphobia@flare-on.com`
 

@@ -6,6 +6,7 @@ categories: [ctf, flare-on]
 tags: [flare-on, flare-on-13, ctf, reverse-engineering, windows, ntfs-ads, rc4]
 description: "Flare-On is an annual reverse-engineering contest run by the FLARE team: each challenge is a program that hides a \"flag,\" a string ending in @flare-on.com, and you have to work out from the compiled binary alone,..."
 render_with_liquid: false
+mermaid: true
 ---
 **Archive:** `2-GhostStream.7z` (password `flare`) · **Flag:** `y0u_kn0w_n07h1n6_j0n_5n0w@flare-on.com`
 

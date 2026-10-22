@@ -6,6 +6,7 @@ categories: [ctf, flare-on]
 tags: [flare-on, flare-on-13, ctf, reverse-engineering, cryptominer, sha256, rc4]
 description: "That last clause isn't flavor text. The intended solution really is a brute force (trying every possible value of a secret until one works), and the flag jokes about it."
 render_with_liquid: false
+mermaid: true
 ---
 <img src="/assets/images/posts/flare-on-13/04-toxicminer-icon.png" alt="ToxicMiner.exe icon" width="96" align="right">
 

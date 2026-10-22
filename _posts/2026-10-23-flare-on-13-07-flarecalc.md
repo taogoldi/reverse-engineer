@@ -6,6 +6,7 @@ categories: [ctf, flare-on]
 tags: [flare-on, flare-on-13, ctf, reverse-engineering, authenticode, asn1, unicorn]
 description: "Flare-On is the FLARE team's yearly reverse-engineering contest: each challenge hides a flag, a string ending in @flare-on.com, and you find it by taking the program apart."
 render_with_liquid: false
+mermaid: true
 ---
 **Archive:** `7-FlareCalc.7z` (password `flare`), containing `FlareCalc.exe` · **Flag:** `t3mplat3s_asn_and_j1t_0h_my@flare-on.com`
 

@@ -6,6 +6,7 @@ categories: [ctf, flare-on]
 tags: [flare-on, flare-on-13, ctf, reverse-engineering, polyglot, pdf, mach-o, udf]
 description: "This is the one I enjoyed most in the whole set, and it's the one that took the widest range of tools. flareon13.doc is 1,855,887 bytes and it is not a Word document. It is six different file formats at the same..."
 render_with_liquid: false
+mermaid: true
 ---
 **Archive:** `3-flareon13_doc.7z` (password `flare`), containing `flareon13.doc` · **Flag:** `Ju$7_4_l177l3_7r34$ur3_HUN7@flare-on.com`
 

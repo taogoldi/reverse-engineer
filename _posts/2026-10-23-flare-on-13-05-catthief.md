@@ -6,6 +6,7 @@ categories: [ctf, flare-on]
 tags: [flare-on, flare-on-13, ctf, reverse-engineering, rust, pcap, huffman]
 description: "Flare-On is the FLARE team's yearly reverse-engineering contest: each challenge hides a flag, a string ending in @flare-on.com, and you find it by taking the program apart."
 render_with_liquid: false
+mermaid: true
 ---
 **Archive:** `5-catthief.7z` (password `flare`), containing `catthief.exe` and `capture.pcapng` · **Flag:** `th3r3_b3_tr34sure_1n_th4t_pc4p@flare-on.com`
 

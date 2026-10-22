@@ -6,6 +6,7 @@ categories: [ctf, flare-on]
 tags: [flare-on, flare-on-13, ctf, reverse-engineering, dotnet, pcap, c2]
 description: "Flare-On is the FLARE team's yearly reverse-engineering contest: each challenge hides a flag, a string ending in @flare-on.com, and you find it by taking the program apart."
 render_with_liquid: false
+mermaid: true
 ---
 **Archive:** `6-ThreatInvaders.7z` (password `flare`), containing `ThreatInvaders.exe` and `challenge.pcapng` · **Flag:** `wh4t_4_l0ng_str4ng3_tr1p_1ts_b33n@flare-on.com`
 

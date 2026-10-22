@@ -6,6 +6,7 @@ categories: [ctf, flare-on]
 tags: [flare-on, flare-on-13, ctf, reverse-engineering, tauri, javascript, packer]
 description: "I submitted the wrong flag for this one. That's going at the top rather than the bottom, because it's the most useful thing in the write-up."
 render_with_liquid: false
+mermaid: true
 ---
 **Archive:** `9-NeonOutRun.7z` (password `flare`), containing `neon_outrun` · **Flag:** `R3_ag3nt_4b0ut_t0_f33l_d1zzy@flare-on.com`
 
